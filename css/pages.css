@@ -234,3 +234,9 @@ button.grp-row { width: 100%; border: 0; border-top: 1px solid var(--line); back
   .pl-rank:empty { display: none; }
   .profile-hero .emblem { width: 80px; height: 71px; }
 }
+
+/* Insights: what workouts add */
+.unlock h2 .ic { width: 17px; height: 17px; color: var(--muted); }
+.unlock-list { list-style: none; padding: 0; margin: .2rem 0 1rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .55rem; }
+.unlock-list li { display: flex; align-items: center; gap: .55rem; color: var(--muted); font-size: .9375rem; }
+.unlock-list .ic { width: 17px; height: 17px; color: var(--text); }

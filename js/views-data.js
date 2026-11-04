@@ -83,14 +83,14 @@
   U.views.insights = () => {
     if (!C.currentBW()) return U.setupView();
     const ws = S().workouts;
-    if (!ws.length) return `<div class="page-head"><h1>Insights</h1></div><section class="card empty-log"><div class="empty-ic">${icon('bulb')}</div><h2>Insights unlock as you log</h2><p class="muted">After a few sessions you'll see your strength profile, weak links, weekly sets per muscle, stalls, and when you'll hit your next rank.</p><a class="btn primary" href="#/log">${icon('plus')} Log a workout</a></section>`;
-    const snap = C.snapshot(), o = snap.overall, today = C.todayISO(), cards = [];
+    const snap = C.snapshot(), o = snap.overall, today = C.todayISO(), cards = [], logged = ws.length > 0;
+    if (!logged && !o) return `<div class="page-head"><h1>Insights</h1></div><section class="card empty-log"><div class="empty-ic">${icon('bulb')}</div><h2>Nothing to analyse yet</h2><p class="muted">Add your key lifts and you'll instantly see your strength profile, strongest and weakest groups, and imbalances. Logging workouts adds trends, streaks and projections.</p><div class="actions"><a class="btn primary" href="#/profile?edit=1">${icon('sparkle')} Add my key lifts</a><button class="btn" data-act="plus">${icon('plus')} Log a workout</button></div></section>`;
     const add = (tone, ic, title, body) => cards.push(`<article class="insight ${tone} reveal"><div class="ins-ic">${icon(ic)}</div><div><h3>${title}</h3><p>${body}</p></div></article>`);
 
     const streak = C.weekStreak();
     const perWeek = Array.from({ length: 8 }, (_, i) => { const wk = C.addDays(C.weekStart(today), -7 * (i + 1)); return ws.filter((w) => C.weekStart(w.date) === wk).length; });
     const avg = perWeek.reduce((a, b) => a + b, 0) / 8;
-    const gap = C.daysBetween(ws.reduce((a, w) => (w.date > a ? w.date : a), ws[0].date), today);
+    const gap = logged ? C.daysBetween(ws.reduce((a, w) => (w.date > a ? w.date : a), ws[0].date), today) : 0;
     if (gap >= 5) add('warn', 'calendar', `${gap} days since your last workout`, 'Strength fades slower than you think, but momentum fades fast. A short session today keeps the chain alive.');
     if (streak >= 2) add('good', 'flame', `${streak}-week streak`, `You've trained every week for ${streak} straight weeks${avg ? `, averaging ${C.round(avg, 1)} sessions a week over the last 8` : ''}. Consistency beats intensity.`);
 
@@ -107,7 +107,16 @@
       if (Math.abs(ma - mb) >= 18) add('info', 'scaleBal', `${title} imbalance`, `Your ${ma > mb ? an : bn} is at the ${Math.round(Math.max(ma, mb))}th percentile, but your ${ma > mb ? bn : an} is at the ${Math.round(Math.min(ma, mb))}th. ${ma > mb ? aHigh : bHigh}`);
     }
     const catList = Object.values(snap.cats).sort((a, b) => b.rank.pct - a.rank.pct);
-    if (catList.length >= 3) add('good', 'medal', `Strongest: ${catList[0].cat.name}`, `${esc(catList[0].top.ex.name)} puts your ${catList[0].cat.name.toLowerCase()} at <b style="color:${tierInfo(catList[0].rank.tier).color}">${esc(catList[0].rank.label)}</b>. Your weakest group is ${catList.at(-1).cat.name.toLowerCase()} (${esc(catList.at(-1).rank.label)}), and raising it is the fastest way up overall.`);
+    if (catList.length >= 2) add('good', 'medal', `Strongest: ${catList[0].cat.name}`, `${esc(catList[0].top.ex.name)} puts your ${catList[0].cat.name.toLowerCase()} at <b style="color:${tierInfo(catList[0].rank.tier).color}">${esc(catList[0].rank.label)}</b>. Your weakest group is ${catList.at(-1).cat.name.toLowerCase()} (${esc(catList.at(-1).rank.label)}), and raising it is the fastest way up overall.`);
+    const months = S().profile.trainingMonths;
+    if (o && months != null) {
+      const exp = months < 6 ? 0 : months < 12 ? 1 : months < 24 ? 2 : months < 60 ? 3 : 5, label = (U.EXPERIENCE.find(([v]) => v === months) || [0, ''])[1].toLowerCase();
+      if (o.tier > exp) add('good', 'up', 'Ahead of the curve', `Lifters with ${label} of training are usually ${TIERS[exp].name}. You're already <b style="color:${tierInfo(o.tier).color}">${esc(o.label)}</b>.`);
+      else if (o.tier === exp) add('good', 'checkCircle', 'Right on track', `${TIERS[exp].name} is typical for ${label} of training, and that's where you are.`);
+      else add('info', 'target', 'Room to grow, fast', `Lifters with ${label} of training are usually ${TIERS[exp].name}. You're ${esc(o.label)}, a gap that closes quickly with a structured program.`);
+    }
+    const near = Object.entries(snap.exRanks).filter(([, r]) => r.next).map(([id, r]) => ({ ex: C.exById(id), r })).sort((a, b) => a.r.need / a.r.value - b.r.need / b.r.value)[0];
+    if (near) add('good', 'zap', 'Closest rank-up', `${esc(near.ex.name)}: ${near.ex.kind === 'bw' ? `${C.round(near.r.need, 1)} more reps` : `+${C.fmtW(near.r.need)}`} on your max gets you <b style="color:${tierInfo(near.r.next.tier).color}">${esc(near.r.next.label)}</b>.`);
     const missing = CATEGORIES.filter((c) => !snap.cats[c.id]);
     if (missing.length && o) add('info', 'layers', `${missing.length} muscle group${missing.length > 1 ? 's' : ''} unranked`, `Your overall rank doesn't include ${missing.map((c) => c.name.toLowerCase()).join(', ')} yet. <a class="link" href="#/profile">Add a lift to your profile</a> or log one in a workout to get the full picture.`);
 
@@ -153,18 +162,21 @@
     if (o) afterRender(() => U.radarChart('#radar2', snap, tierInfo(o.tier).color));
     const f = tl[0], l = tl.at(-1);
 
-    return `<div class="page-head reveal"><h1>Insights</h1><span class="muted small">Live from your log</span></div>
+    return `<div class="page-head reveal"><h1>Insights</h1><span class="muted small">${logged ? 'From your profile and workouts' : 'From your strength profile'}</span></div>
       ${tl.length >= 2 ? `<section class="card reveal"><div class="sec-head"><div><h2>Your climb</h2><span class="muted small">Overall rank over time</span></div>${l.pct >= f.pct ? `<span class="chip" style="--c:#4ee6a0">${icon('up')} +${C.round(l.pct - f.pct, 1)} pts</span>` : ''}</div><div id="tl-chart"></div>
         <p class="muted small">${f.label === l.label ? `Holding ${esc(l.label)} since ${fmtDate(f.date)}.` : `${esc(f.label)} on ${fmtDate(f.date)} → <b style="color:${tierInfo(l.tier).color}">${esc(l.label)}</b> today.`}</p></section>` : ''}
       ${proj.length ? `<section class="card reveal"><div class="sec-head"><div><h2>Next rank-ups</h2><span class="muted small">Projected from your last 4 months</span></div></div>${proj.slice(0, 5).map((p) => {
         const nt = tierInfo(p.r.next.tier), when = p.days < 7 ? 'this week' : p.days < 11 ? "~1 week" : p.days < 60 ? `~${Math.round(p.days / 7)} weeks` : p.days < 540 ? `~${Math.round(p.days / 30)} months` : 'long grind';
         return `<div class="proj-row">${emblem(p.r.tier, 34, p.r.div)}<div class="grow"><b>${esc(p.ex.short)}</b> <span class="muted xs">${C.fmtMetric(p.ex, p.r.value)} → ${C.fmtMetric(p.ex, p.r.nextValue)} · +${C.fmtMetric(p.ex, p.tr.perMonth)}/mo</span>${bar(p.r.frac, tierInfo(p.r.tier).color)}</div><div class="proj-when"><span style="color:${nt.color}">${esc(p.r.next.label)}</span><b>${when}</b></div></div>`;
       }).join('')}</section>` : ''}
-      <section class="two-col">
-        ${o ? `<div class="card reveal"><div class="sec-head"><h2>Strength profile</h2>${chip(o.tier, o.label)}</div><div id="radar2" class="radar"></div></div>` : ''}
-        <div class="card reveal"><div class="sec-head"><div><h2>This week's sets</h2><span class="muted small">Last 7 days · band = 10–20 hard sets, the research-backed range for growth</span></div></div>
-          <div class="sb">${setBars}</div><p class="muted small">${under.length ? `Under target: ${under.map((c) => c.name.toLowerCase()).join(', ')}.` : 'Every trained group is in the zone. Textbook.'}</p></div></section>
+      <section class="${logged && o ? 'two-col' : ''}">
+        ${o ? `<div class="card reveal"><div class="sec-head"><div><h2>Strength profile</h2><span class="muted small">Percentile per muscle group${logged ? '' : ' · from your profile lifts'}</span></div>${chip(o.tier, o.label)}</div><div id="radar2" class="radar"></div></div>` : ''}
+        ${logged ? `<div class="card reveal"><div class="sec-head"><div><h2>This week's sets</h2><span class="muted small">Last 7 days · band = 10–20 hard sets, the research-backed range for growth</span></div></div>
+          <div class="sb">${setBars}</div><p class="muted small">${under.length ? `Under target: ${under.map((c) => c.name.toLowerCase()).join(', ')}.` : 'Every trained group is in the zone. Textbook.'}</p></div>` : ''}</section>
       <div class="insights">${cards.join('')}</div>
+      ${logged ? '' : `<section class="card reveal unlock"><div class="sec-head"><div><h2>${icon('lock')} Unlocks when you log workouts</h2><span class="muted small">Your profile shows where you stand. Workouts show where you're heading.</span></div></div>
+        <ul class="unlock-list"><li>${icon('chart')} Your rank over time</li><li>${icon('up')} Projected dates for your next rank-ups</li><li>${icon('bars')} Weekly sets per muscle group</li><li>${icon('flame')} Streaks and consistency</li><li>${icon('trophy')} PRs, stalls and volume trends</li></ul>
+        <button class="btn primary" data-act="plus">${icon('plus')} Log a workout</button></section>`}
       ${U.volumeCard()}`;
   };
 })();
