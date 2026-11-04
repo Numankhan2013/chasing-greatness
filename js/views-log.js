@@ -62,7 +62,7 @@
           <label class="date-chip ${d.date !== C.todayISO() ? 'changed' : ''}">${icon('calendar')}<span>${relDate(d.date)}</span><input type="date" id="log-date" value="${d.date}" max="${C.todayISO()}" aria-label="Change workout date"></label>
           <button class="date-chip" data-act="toggle-notes">${icon('note')}<span>${d.notes ? 'Note added' : 'Add note'}</span></button>
         </div></div>
-        ${d.id ? `<button class="icon-btn" data-act="del-wo" data-id="${d.id}" aria-label="Delete workout">${icon('trash')}</button>` : d.entries.length ? '<button class="btn ghost sm" data-act="discard">Discard</button>' : ''}</div>
+        ${d.id ? '<button class="btn sm" data-act="cancel-edit">Cancel</button>' : d.entries.length ? '<button class="btn sm" data-act="discard">Discard</button>' : ''}</div>
       ${d.showNotes ? `<input class="notes" id="log-notes" value="${esc(d.notes)}" placeholder="How did it feel? Sleep, energy, anything…">` : ''}
       ${d.entries.length ? '' : `<section class="empty-log card reveal"><div class="empty-ic">${icon('dumbbell')}</div><h2>What are we hitting today?</h2>
         <p class="muted">Add an exercise and start logging sets. The date is already set to today.</p>
@@ -71,27 +71,32 @@
         ${lastW ? `<button class="btn ghost sm" data-act="repeat-last">${icon('repeat')} Repeat last workout (${relDate(lastW.date).toLowerCase()})</button>` : ''}</section>`}
       <div id="entries">${d.entries.map(entryCard).join('')}</div>
       ${d.entries.length ? `<button class="btn ghost wide add-ex" data-act="pick">${icon('plus')} Add exercise</button>
-        <div class="finish-bar"><button class="btn primary lg wide" data-act="finish">${icon('check')} ${d.id ? 'Save changes' : 'Finish workout'}<span class="finish-meta">${U.finishMeta()}</span></button></div>` : ''}`;
+        <div class="finish-bar"><button class="btn primary lg wide" data-act="finish">${icon('check')} ${d.id ? 'Save changes' : 'Finish workout'}<span class="finish-meta">${U.finishMeta()}</span></button></div>` : ''}
+      ${d.id ? `<button class="btn danger wide" data-act="del-wo" data-id="${d.id}">${icon('trash')} Delete this workout</button>` : ''}`;
   };
 
   function entryCard(en, ei) {
-    const ex = C.exById(en.ex), last = lastSession(en.ex), lr = C.liftRank(en.ex);
-    const hint = ex.kind === 'db' ? ' · weight per dumbbell' : ex.kind === 'bw' ? ' · added weight (0 = bodyweight)' : '';
+    const ex = C.exById(en.ex), last = lastSession(en.ex), lr = C.liftRank(en.ex), u = C.unit();
+    const col = ex.kind === 'db' ? `One DB (${u})` : ex.kind === 'bw' ? `Extra ${u}` : `Weight (${u})`;
+    const howto = ex.kind === 'db' ? `<div class="howto">${icon('dumbbell')}<span>Enter the weight of <b>one dumbbell</b>. Holding 25 ${u} in each hand? Enter <b>25</b>.</span></div>`
+      : ex.kind === 'bw' ? `<div class="howto">${icon('info')}<span>Your bodyweight counts automatically. Enter <b>0</b>, or only the <b>extra</b> weight (belt or vest).</span></div>` : '';
     return `<section class="card entry" data-e="${ei}">
-      <div class="entry-head"><div class="entry-title">${ex.std ? emblem(lr ? lr.tier : -1, 34, lr?.div) : `<span class="ex-ic">${icon('dumbbell')}</span>`}<div><b>${esc(ex.name)}</b><span class="muted xs">${esc(C.catById(ex.cat).name)}${hint}${ex.std ? '' : ' · unranked'}</span></div></div>
-        <button class="icon-btn" data-act="rm-entry" data-e="${ei}" aria-label="Remove exercise">${icon('x')}</button></div>
-      ${last ? `<div class="last">${icon('history')} Last time, ${relDate(last.date).toLowerCase()}: ${U.summarizeEntry(last.en).replace(/<b>.*?<\/b>/, '').replace(/<[^>]+>/g, '').trim()}${ex.kind === 'bw' ? '' : ' ' + C.unit()}</div>` : ''}
-      <div class="sets"><div class="set-row head"><span>Set</span><span>${unitLabel(ex)}</span><span>Reps</span><span></span></div>
+      <div class="entry-head"><div class="entry-title">${ex.std ? emblem(lr ? lr.tier : -1, 34, lr?.div) : `<span class="ex-ic">${icon('dumbbell')}</span>`}<div><b>${esc(ex.name)}</b><span class="muted xs">${esc(C.catById(ex.cat).name)}${ex.std ? (lr ? ' · ' + esc(lr.label) : '') : ' · not ranked'}</span></div></div>
+        <button class="icon-btn" data-act="rm-entry" data-e="${ei}" aria-label="Remove ${esc(ex.name)}" title="Remove exercise">${icon('trash')}</button></div>
+      ${howto}
+      ${last ? `<div class="last">${icon('history')} Last time, ${relDate(last.date).toLowerCase()}: ${U.summarizeEntry(last.en).replace(/<b>.*?<\/b>/, '').replace(/<[^>]+>/g, '').trim()}${ex.kind === 'bw' ? '' : ' ' + u}</div>` : ''}
+      <div class="sets"><div class="set-row head"><span>Set</span><span>${col}</span><span>Reps</span><span>Done</span></div>
         ${en.sets.map((s, si) => {
           const ls = last?.en.sets[si] || last?.en.sets.at(-1);
           const phW = ls ? (ex.kind === 'bw' && !ls.w ? '0' : String(C.wNum(ls.w))) : ex.kind === 'bw' ? '0' : '';
           return `<div class="set-row ${s.done ? 'done' : ''}" data-s="${si}">
-            <button class="set-n" data-act="rm-set" data-e="${ei}" data-s="${si}" aria-label="Remove set ${si + 1}" title="Tap to remove">${si + 1}</button>
-            <input type="number" inputmode="decimal" step="any" data-f="w" value="${esc(s.w)}" placeholder="${phW}" aria-label="Weight, set ${si + 1}">
+            <span class="set-n">${si + 1}</span>
+            <input type="number" inputmode="decimal" step="any" data-f="w" value="${esc(s.w)}" placeholder="${phW}" aria-label="${col}, set ${si + 1}">
             <input type="number" inputmode="numeric" step="1" min="0" data-f="r" value="${esc(s.r)}" placeholder="${ls ? ls.r : ''}" aria-label="Reps, set ${si + 1}">
-            <button class="check" data-act="done-set" data-e="${ei}" data-s="${si}" aria-label="Complete set ${si + 1}">${icon('check')}</button></div>`;
+            <button class="check" data-act="done-set" data-e="${ei}" data-s="${si}" aria-label="Mark set ${si + 1} done">${icon('check')}</button></div>`;
         }).join('')}</div>
-      <div class="entry-foot"><button class="btn ghost sm" data-act="add-set" data-e="${ei}">${icon('plus')} Set</button><div class="preview" data-preview="${ei}">${U.entryPreview(en)}</div></div></section>`;
+      <div class="entry-foot"><div class="stepper"><button class="btn sm" data-act="rm-set" data-e="${ei}" aria-label="Remove last set" ${en.sets.length <= 1 ? 'disabled' : ''}>${icon('minus')}</button><span class="xs muted">Sets</span><button class="btn sm" data-act="add-set" data-e="${ei}" aria-label="Add a set">${icon('plus')}</button></div><div class="preview" data-preview="${ei}">${U.entryPreview(en)}</div></div>
+      <div data-sanity="${ei}">${U.entrySanity(en, ei)}</div></section>`;
   }
 
   U.entryPreview = (en) => {
@@ -101,7 +106,20 @@
     if (!best) return '';
     const prev = C.bestOf(en.ex), isPR = prev && best > prev.best + 1e-6 && (!st.draft.id || prev.wid !== st.draft.id);
     const r = C.rankOf(en.ex, best);
-    return `<span class="muted">${ex.kind === 'bw' ? 'Equiv.' : 'e1RM'}</span> <b class="mono">${C.fmtMetric(ex, best)}</b>${r ? chip(r.tier, r.label) : ''}${isPR ? `<span class="chip pr">${icon('trophy')} PR</span>` : ''}`;
+    return `<span class="muted">${ex.kind === 'bw' ? 'Equiv.' : 'Est. max'}</span> <b class="mono">${C.fmtMetric(ex, best)}</b>${r ? chip(r.tier, r.label) : ''}${isPR ? `<span class="chip pr">${icon('trophy')} PR</span>` : ''}`;
+  };
+
+  /* Catch likely typos: a top-3% result is rare, and for dumbbells it usually means both bells were added up. */
+  U.entrySanity = (en, ei) => {
+    const ex = C.exById(en.ex);
+    if (!ex.std) return '';
+    const bw = C.bwAt(st.draft.date) || C.currentBW();
+    let best = 0;
+    for (const s of en.sets) { const w = parseFloat(s.w) || 0, r = parseInt(s.r, 10); if (r > 0 && (w > 0 || ex.kind === 'bw')) best = Math.max(best, C.setMetric(ex, { w: C.fromDisp(w), r }, bw)); }
+    const r = best ? C.rankOf(en.ex, best) : null;
+    if (!r || r.pct < 97) return '';
+    if (ex.kind === 'db') return `<div class="sanity">${icon('warn')}<span>That's top 3% of all lifters. <b>Did you add both dumbbells together?</b> Enter the weight of <b>one</b> dumbbell.</span><button class="btn sm" data-act="halve" data-e="${ei}">Use half</button></div>`;
+    return `<div class="sanity">${icon('warn')}<span>That's top 3% of all lifters. Double-check the weight and reps.</span></div>`;
   };
 
   /* ── exercise picker ── */
@@ -120,7 +138,7 @@
     const row = (e) => {
       const lr = C.liftRank(e.id);
       return `<button class="pick-row ${inDraft.has(e.id) ? 'added' : ''}" data-act="pick-ex" data-id="${e.id}">${e.std ? emblem(lr ? lr.tier : -1, 30, lr?.div) : `<span class="ex-ic sm">${icon('dumbbell')}</span>`}
-        <span class="pick-name"><b>${esc(e.name)}</b><span class="muted xs">${esc(C.catById(e.cat).name)}${e.kind === 'db' ? ' · dumbbell' : e.kind === 'bw' ? ' · bodyweight' : ''}${e.std ? (lr ? ` · ${esc(lr.label)}` : ' · ranked') : ' · unranked'}</span></span>
+        <span class="pick-name"><b>${esc(e.name)}</b><span class="muted xs">${esc(C.catById(e.cat).name)}${e.kind === 'db' ? ' · dumbbell (enter one)' : e.kind === 'bw' ? ' · bodyweight' : ''}${e.std ? (lr ? ` · ${esc(lr.label)}` : ' · ranked') : ' · unranked'}</span></span>
         ${inDraft.has(e.id) ? icon('check', 'ok') : icon('plus', 'muted')}</button>`;
     };
     let html = '';
@@ -151,17 +169,18 @@
     const before = C.snapshot();
     const beforeBest = Object.fromEntries(entries.map((en) => [en.ex, C.bestOf(en.ex)?.best || 0]));
     if (wasEdit) Object.assign(S().workouts.find((x) => x.id === d.id), { date, notes: d.notes.trim(), entries, updatedAt: Date.now() });
-    else S().workouts.push({ id: C.uid(), date, notes: d.notes.trim(), entries, updatedAt: Date.now() });
+    const newId = wasEdit ? d.id : C.uid();
+    if (!wasEdit) S().workouts.push({ id: newId, date, notes: d.notes.trim(), entries, updatedAt: Date.now() });
     if (!C.save()) toast('Storage is blocked in this browser, so data won\'t persist.');
     U.stopRest();
     st.draft = wasEdit ? st.stash : null; st.stash = null;
     if (!wasEdit) U.clearDraft();
-    const next = () => (wasEdit ? toast('Workout updated.') : summarySheet(date, entries, before, beforeBest));
+    const next = () => (wasEdit ? toast('Workout updated.') : summarySheet(date, entries, before, beforeBest, newId));
     if (location.hash === '#/home') { window.dispatchEvent(new HashChangeEvent('hashchange')); next(); }
     else { window.addEventListener('hashchange', () => setTimeout(next, 0), { once: true }); location.hash = '#/home'; }
   };
 
-  function summarySheet(date, entries, before, beforeBest) {
+  function summarySheet(date, entries, before, beforeBest, wid) {
     const after = C.snapshot();
     const prs = entries.filter((en) => beforeBest[en.ex] > 0 && (C.bestOf(en.ex)?.best || 0) > beforeBest[en.ex] + 1e-6).map((en) => ({ ex: C.exById(en.ex), v: C.bestOf(en.ex).best, d: C.bestOf(en.ex).best - beforeBest[en.ex] }));
     const ups = Object.entries(after.exRanks).filter(([id, r]) => !before.exRanks[id] || r.step > before.exRanks[id].step).map(([id, r]) => ({ ex: C.exById(id), r, was: before.exRanks[id] })).sort((a, b) => b.r.pct - a.r.pct);
@@ -175,7 +194,8 @@
       <div class="mini-stats"><div><span class="muted xs">Exercises</span><b class="mono">${entries.length}</b></div><div><span class="muted xs">Sets</span><b class="mono">${sets}</b></div><div><span class="muted xs">Volume</span><b class="mono">${C.fmtW(vol)}</b></div><div><span class="muted xs">Date</span><b>${relDate(date)}</b></div></div>
       ${ups.length ? `<h3 class="sub">Rank ups</h3>${ups.map((u) => `<div class="sum-row">${emblem(u.r.tier, 34, u.r.div)}<span><b>${esc(u.ex.name)}</b><span class="muted xs">${u.was ? esc(u.was.label) + ' → ' : 'New: '}<span style="color:${tierInfo(u.r.tier).color}">${esc(u.r.label)}</span></span></span></div>`).join('')}` : ''}
       ${prs.length ? `<h3 class="sub">Personal records</h3>${prs.map((p) => `<div class="sum-row"><span class="ex-ic sm gold">${icon('trophy')}</span><span><b>${esc(p.ex.name)}</b><span class="muted xs">${C.fmtMetric(p.ex, p.v)} (+${C.fmtMetric(p.ex, p.d)})</span></span></div>`).join('')}` : ''}
-      <button class="btn primary lg wide" data-act="close-sheet">Let's go</button></div>`);
+      <button class="btn primary lg wide" data-act="close-sheet">Done</button>
+      <a class="btn wide" href="#/log?id=${wid}">${icon('edit')} Made a mistake? Edit or delete</a></div>`);
     if (oUp || ups.length || prs.length) setTimeout(() => U.celebrateFX(t.color), 250);
   }
 })();

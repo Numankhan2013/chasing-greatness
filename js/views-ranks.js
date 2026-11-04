@@ -18,7 +18,7 @@
     return `<div class="tt-row ${res.tier === i ? 'cur' : ''} ${reached ? 'done' : ''}" style="--c:${t.color}">${emblem(i, 26)}<span class="tt-name">${t.name}</span><span class="muted xs">Top ${100 - t.from}%</span><span class="mono tt-val">${val}</span>${reached ? icon('check', 'tt-check') : '<span class="tt-check"></span>'}</div>`;
   }).join('')}</div>`;
 
-  const calcWLabel = () => { const ex = C.exById(U.st.calc.ex); return ex.kind === 'bw' ? `Added weight (${C.unit()})` : ex.kind === 'db' ? `Per dumbbell (${C.unit()})` : `Weight (${C.unit()})`; };
+  const calcWLabel = () => { const ex = C.exById(U.st.calc.ex); return ex.kind === 'bw' ? `Added weight (${C.unit()})` : ex.kind === 'db' ? `One dumbbell (${C.unit()})` : `Weight (${C.unit()})`; };
   U.calcWLabel = calcWLabel;
   U.calcResult = () => {
     const calc = U.st.calc, ex = C.exById(calc.ex);
@@ -79,7 +79,7 @@
     U.openSheet(`<div class="sheet-emblem">${emblem(r.tier, 120, r.div)}</div>
       <div class="center"><div class="kicker">${esc(C.catById(ex.cat).name)}</div><h2 class="sheet-title">${esc(ex.name)}</h2><div class="rank-name sm" style="color:${t.color}">${esc(r.label)}</div>
       <p>Stronger than <b>${pctTxt(r.pct)}%</b> of lifters at your bodyweight</p></div>${ladder(r.pct)}
-      <div class="mini-stats"><div><span class="muted xs">Best</span><b class="mono">${C.fmtMetric(ex, r.value)}</b></div><div><span class="muted xs">Top set</span><b class="mono">${ex.kind === 'bw' ? (b.top.w ? '+' + C.wNum(b.top.w) : 'BW') : C.wNum(b.top.w)}×${b.top.r}</b></div><div><span class="muted xs">Set on</span><b>${fmtDate(b.date)}</b></div><div><span class="muted xs">Sessions</span><b class="mono">${h.length}</b></div></div>
+      <div class="mini-stats"><div><span class="muted xs">Best</span><b class="mono">${C.fmtMetric(ex, r.value)}</b></div><div><span class="muted xs">Top set</span><b class="mono">${ex.kind === 'bw' ? (b.top.w ? '+' + C.wNum(b.top.w) : 'BW') : C.wNum(b.top.w)}×${b.top.r}${ex.kind === 'db' ? ' <small class="muted">each</small>' : ''}</b></div><div><span class="muted xs">Set on</span><b>${fmtDate(b.date)}</b></div><div><span class="muted xs">Sessions</span><b class="mono">${h.length}</b></div></div>
       ${r.next ? `<div class="next-callout" style="--c:${tierInfo(r.next.tier).color}">${icon('target')}<span><b>${ex.kind === 'bw' ? `${C.round(r.need, 1)} more reps` : '+' + C.fmtW(r.need)}</b> to reach <b>${esc(r.next.label)}</b>${ex.kind !== 'bw' ? ` (a ${C.fmtW(C.plateUp(r.nextValue))} max)` : ''}</span></div>` : ''}
       <h3 class="sub">Tier ladder at ${C.fmtW(C.currentBW())}</h3>${U.tierTable(ex, r)}
       <div class="actions"><a class="btn primary" href="#/progress?ex=${id}">${icon('chart')} Progress</a><a class="btn ghost" href="#/log?ex=${id}">${icon('plus')} Log it</a></div>`);

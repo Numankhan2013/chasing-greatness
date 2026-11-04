@@ -35,9 +35,9 @@ window.UI = (() => {
     if (!el) return;
     if (!window.ApexCharts) { el.innerHTML = '<div class="empty-chart">Charts load when you\'re online</div>'; return; }
     const base = {
-      chart: { background: 'transparent', foreColor: '#8a91a5', fontFamily: 'Satoshi, system-ui, sans-serif', toolbar: { show: false }, zoom: { enabled: false }, parentHeightOffset: 0, animations: { enabled: !reduceMotion, speed: 700 } },
+      chart: { background: 'transparent', foreColor: '#8e8e93', fontFamily: '-apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif', toolbar: { show: false }, zoom: { enabled: false }, parentHeightOffset: 0, animations: { enabled: !reduceMotion, speed: 700 } },
       theme: { mode: 'dark' },
-      grid: { borderColor: 'rgba(255,255,255,.06)', strokeDashArray: 4, padding: { left: 6, right: 10 } },
+      grid: { borderColor: 'rgba(84,84,88,.35)', strokeDashArray: 4, padding: { left: 6, right: 10 } },
       dataLabels: { enabled: false }, legend: { show: false },
       tooltip: { theme: 'dark' },
     };
@@ -67,7 +67,7 @@ window.UI = (() => {
     if (tier === 6) front = `<path d="M35,13 L31,-3 L42,5 L50,-8 L58,5 L69,-3 L65,13 Z" fill="url(#${id}g)" stroke="${t.color}" stroke-width="1"/>`;
     const chev = (y, w = 5, o = 1) => `<path d="M39,${y + 6} L50,${y - 3} L61,${y + 6}" fill="none" stroke="${t.color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" opacity="${o}"/>`;
     let glyph;
-    if (!ranked) glyph = `<text x="50" y="61" text-anchor="middle" font-family="Clash Display, sans-serif" font-weight="700" font-size="26" fill="${t.color}">?</text>`;
+    if (!ranked) glyph = `<text x="50" y="61" text-anchor="middle" font-family="-apple-system, Inter, sans-serif" font-weight="700" font-size="26" fill="${t.color}">?</text>`;
     else if (tier <= 2) glyph = [[52], [56, 46], [61, 51, 41]][tier].map((y) => chev(y)).join('');
     else glyph = `<path d="${starPath(50, tier >= 4 ? 46 : 50, tier >= 4 ? 13 : 15, tier >= 4 ? 5.6 : 6.4)}" fill="${t.color}"/>` + (tier === 4 ? chev(64) : tier >= 5 ? chev(63) + chev(71, 3.5, 0.7) : '');
     const np = 4 - div;
@@ -125,10 +125,10 @@ window.UI = (() => {
   function paint(root = document) {
     if (!window.gsap || reduceMotion) { $$('[data-count]', root).forEach((el) => { el.textContent = el.dataset.count; }); return; }
     const items = $$('.reveal', root);
-    if (items.length) gsap.from(items, { y: 16, opacity: 0, duration: 0.55, stagger: 0.04, ease: 'power3.out', clearProps: 'transform,opacity' });
+    if (items.length) gsap.from(items, { y: 10, opacity: 0, duration: 0.45, stagger: 0.03, ease: 'power2.out', clearProps: 'transform,opacity' });
     $$('[data-count]', root).forEach((el) => { const end = parseFloat(el.dataset.count), o = { v: 0 }; gsap.to(o, { v: end, duration: 1.1, ease: 'power2.out', onUpdate: () => { el.textContent = Math.round(o.v); } }); });
     $$('.bar span', root).forEach((el) => gsap.from(el, { width: 0, duration: 0.9, ease: 'power3.out', delay: 0.15 }));
-    $$('.hero-emblem .emblem, .sheet-emblem .emblem', root).forEach((el) => gsap.from(el, { scale: 0.6, rotate: -12, opacity: 0, duration: 0.8, ease: 'back.out(1.8)' }));
+    $$('.hero-emblem .emblem, .sheet-emblem .emblem', root).forEach((el) => gsap.from(el, { scale: 0.85, opacity: 0, duration: 0.6, ease: 'power3.out' }));
   }
 
   return { C, MONTHS, reduceMotion, $, $$, esc, icon, fmtDate, relDate, pctTxt, tierInfo, unitLabel, afterRender, flushMounts, destroyCharts, mountChart, emblem, chip, bar, ladder, ring, toast, openSheet, closeSheet, timer, startRest, stopRest, tickRest, celebrateFX, paint, views: {}, st: { draft: null, stash: null, calc: null } };

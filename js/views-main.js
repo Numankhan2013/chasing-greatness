@@ -45,7 +45,7 @@
     if (!sets.length) return '';
     const w = (s) => (ex.kind === 'bw' ? (s.w ? `+${C.wNum(s.w)}` : 'BW') : C.wNum(s.w));
     const same = sets.every((s) => s.w === sets[0].w && s.r === sets[0].r);
-    const body = same ? `${sets.length}×${sets[0].r} @ ${w(sets[0])}` : sets.map((s) => `${w(s)}×${s.r}`).join(', ');
+    const body = (same ? `${sets.length}×${sets[0].r} @ ${w(sets[0])}` : sets.map((s) => `${w(s)}×${s.r}`).join(', ')) + (ex.kind === 'db' ? ' each' : '');
     return `<span class="ex-pill"><b>${esc(ex.short || ex.name)}</b> ${body}</span>`;
   };
   U.workoutRow = (w) => `<a class="wo" href="#/log?id=${w.id}"><div class="wo-date">${relDate(w.date)}</div><div class="wo-body">${w.entries.map(U.summarizeEntry).join('')}</div></a>`;
@@ -96,14 +96,11 @@
       const tt = tierInfo(d.rank.tier);
       return `<a class="cat-tile" href="#/ranks?cat=${c.id}" style="--c:${tt.color}">${emblem(d.rank.tier, 38, d.rank.div)}<div><b>${c.name}</b><span class="small" style="color:${tt.color}">${esc(d.rank.label)}</span></div><span class="cat-pct mono">${pctTxt(d.rank.pct)}%</span></a>`;
     }).join('');
-    if (o) afterRender(() => U.radarChart('#radar', snap, t.color));
     const top = Object.entries(snap.exRanks).sort((a, b) => b[1].pct - a[1].pct).slice(0, 8);
     const recent = [...S().workouts].sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt - a.updatedAt).slice(0, 4);
 
     return `${hero}${stats}
-      ${o ? `<section class="two-col">
-        <div class="card reveal"><div class="sec-head"><h2>Strength profile</h2><a class="link" href="#/ranks">All ranks ${icon('chevRight')}</a></div><div id="radar" class="radar"></div></div>
-        <div class="card reveal"><div class="sec-head"><h2>Muscle groups</h2><span class="muted small">Best lift per group</span></div><div class="cat-grid">${tiles}</div></div></section>
+      ${o ? `<section class="card reveal"><div class="sec-head"><h2>Muscle groups</h2><a class="link" href="#/ranks">All ranks ${icon('chevRight')}</a></div><div class="cat-grid">${tiles}</div></section>
       <section class="reveal"><div class="sec-head"><h2>Top lifts</h2><a class="link" href="#/ranks">See all ${icon('chevRight')}</a></div><div class="h-scroll">${top.map(([id, r]) => U.liftCard(id, r)).join('')}</div></section>` : ''}
       <section class="two-col">
         <div class="card reveal"><div class="sec-head"><h2>Consistency</h2><span class="muted small">Last 6 months</span></div>${U.heatmap()}</div>
@@ -115,11 +112,11 @@
     const ws = [...S().workouts].sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt - a.updatedAt);
     if (!ws.length) return `<div class="page-head"><h1>History</h1></div><section class="card empty-log"><p class="muted">No workouts yet.</p><a class="btn primary" href="#/log">${icon('plus')} Log one</a></section>`;
     let lastM = '';
-    return `<div class="page-head reveal"><h1>History</h1><span class="muted small">${ws.length} workouts · tap to edit</span></div>` + ws.map((w) => {
+    return `<div class="page-head reveal"><h1>History</h1><span class="muted small">${ws.length} workouts</span></div>` + ws.map((w) => {
       const d = C.parseDate(w.date), m = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`, head = m !== lastM ? `<h3 class="month">${m}</h3>` : '';
       lastM = m;
       const sets = w.entries.reduce((n, e) => n + e.sets.length, 0);
-      return `${head}<a class="card wo-card reveal" href="#/log?id=${w.id}"><div class="wo-card-head"><div><b>${fmtDate(w.date, true)}</b> <span class="muted small">· ${relDate(w.date)} · ${sets} sets</span></div>${icon('chevRight', 'muted')}</div>
+      return `${head}<a class="card wo-card reveal" href="#/log?id=${w.id}"><div class="wo-card-head"><div class="wo-when"><b>${fmtDate(w.date, true)}</b><span class="muted small">${relDate(w.date)} · ${sets} sets</span></div><div class="wo-actions"><span class="wo-edit">${icon('edit')} Edit</span><button class="icon-btn" data-act="del-wo" data-id="${w.id}" aria-label="Delete workout from ${fmtDate(w.date, true)}">${icon('trash')}</button></div></div>
         <div class="wo-body">${w.entries.map(U.summarizeEntry).join('')}${w.notes ? `<div class="muted small note">“${esc(w.notes)}”</div>` : ''}</div></a>`;
     }).join('');
   };

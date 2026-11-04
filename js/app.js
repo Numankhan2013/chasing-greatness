@@ -103,6 +103,7 @@
       const ei = +el.closest('[data-e]').dataset.e, si = +el.closest('[data-s]').dataset.s;
       d.entries[ei].sets[si][el.dataset.f] = el.value;
       $(`[data-preview="${ei}"]`).innerHTML = U.entryPreview(d.entries[ei]);
+      $(`[data-sanity="${ei}"]`).innerHTML = U.entrySanity(d.entries[ei], ei);
       const fm = $('.finish-meta'); if (fm) fm.textContent = U.finishMeta();
       U.persistDraft();
       return;
@@ -154,7 +155,13 @@
         break;
       }
       case 'add-set': { const en = d.entries[ei], l = en.sets.at(-1); en.sets.push(l ? { w: l.w, r: l.r, done: false } : U.blankSet()); U.persistDraft(); rerenderLog(); break; }
-      case 'rm-set': { const en = d.entries[ei]; en.sets.splice(si, 1); if (!en.sets.length) en.sets.push(U.blankSet()); U.persistDraft(); rerenderLog(); break; }
+      case 'rm-set': { const en = d.entries[ei]; if (en.sets.length > 1) en.sets.pop(); U.persistDraft(); rerenderLog(); break; }
+      case 'halve': {
+        d.entries[ei].sets.forEach((s) => { const w = parseFloat(s.w); if (w > 0) s.w = String(C.round(w / 2, 2)); });
+        U.persistDraft(); rerenderLog(); toast('Halved. Now it\'s the weight of one dumbbell.');
+        break;
+      }
+      case 'cancel-edit': location.hash = '#/history'; break;
       case 'done-set': {
         const s = d.entries[ei].sets[si], row = b.closest('.set-row');
         if (!s.done) {
@@ -172,13 +179,18 @@
       case 'toggle-notes': d.showNotes = !d.showNotes; rerenderLog(); if (d.showNotes) $('#log-notes')?.focus(); break;
       case 'discard': if (confirm('Discard this workout?')) { st.draft = U.newDraft(); U.clearDraft(); U.stopRest(); rerenderLog(); } break;
       case 'finish': U.finishWorkout(); break;
-      case 'del-wo':
-        if (confirm('Delete this workout? This can\'t be undone.')) {
-          S().workouts = S().workouts.filter((w) => w.id !== b.dataset.id);
-          S().deleted.push({ id: b.dataset.id, at: Date.now() });
-          C.save(); st.draft = st.stash; st.stash = null; location.hash = '#/history'; toast('Workout deleted.');
-        }
+      case 'del-wo': {
+        e.preventDefault(); e.stopPropagation();
+        const id = b.dataset.id, w = S().workouts.find((x) => x.id === id);
+        if (!w || !confirm(`Delete the workout from ${U.fmtDate(w.date, true)}? This can't be undone.`)) break;
+        S().workouts = S().workouts.filter((x) => x.id !== id);
+        S().deleted.push({ id, at: Date.now() });
+        C.save();
+        if (st.draft?.id === id) { st.draft = st.stash; st.stash = null; }
+        toast('Workout deleted.');
+        if (location.hash.startsWith('#/history')) render(); else location.hash = '#/history';
         break;
+      }
       case 'del-custom':
         if (C.history(b.dataset.id).length && !confirm('This exercise has logged sets. Delete it and its sets?')) break;
         S().custom = S().custom.filter((c) => c.id !== b.dataset.id);
