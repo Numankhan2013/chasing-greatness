@@ -5,7 +5,8 @@
   const U = window.UI, C = U.C, { TIERS, CATEGORIES } = C;
   const { esc, icon, emblem, chip, bar, ladder, tierInfo, pctTxt, fmtDate } = U;
   const S = () => C.state;
-  const CORE = ['bench', 'squat', 'deadlift', 'ohp', 'row', 'pullup'];
+  // One common lift per muscle group, so a new profile covers all six groups from day one.
+  const CORE = ['bench', 'ohp', 'pulldown', 'squat', 'deadlift', 'curl'];
   U.EXPERIENCE = [[3, 'Under 6 months'], [9, '6–12 months'], [18, '1–2 years'], [42, '2–5 years'], [72, '5+ years']];
   const expectedTier = (m) => (m < 6 ? 0 : m < 12 ? 1 : m < 24 ? 2 : m < 60 ? 3 : 4);
   const expLabel = (m) => (U.EXPERIENCE.find(([v]) => v === m) || [0, ''])[1];
@@ -14,7 +15,8 @@
   function liftRow(ex) {
     const l = S().lifts[ex.id], u = C.unit();
     const w = l ? (ex.kind === 'bw' ? (l.w ? String(C.wNum(l.w)) : '0') : String(C.wNum(l.w))) : '';
-    const hint = ex.kind === 'db' ? `one dumbbell, ${u}` : ex.kind === 'bw' ? `extra ${u} (0 = bodyweight)` : '';
+    const grp = C.catById(ex.cat).name;
+    const hint = ex.kind === 'db' ? `${grp} · weight of one dumbbell` : ex.kind === 'bw' ? `${grp} · extra ${u} (0 = bodyweight)` : grp;
     return `<div class="pl-row" data-ex="${ex.id}">
       <div class="pl-name"><b>${esc(ex.name)}</b>${hint ? `<span class="muted xs">${hint}</span>` : ''}</div>
       <input type="number" inputmode="decimal" step="any" data-pf="w" value="${esc(w)}" placeholder="${ex.kind === 'bw' ? '0' : u}" aria-label="${esc(ex.name)} weight${hint ? ' (' + hint + ')' : ''}">
@@ -33,7 +35,7 @@
     const p = S().profile;
     const extra = Object.keys(S().lifts).filter((id) => !CORE.includes(id) && C.exById(id).std).map((id) => C.exById(id));
     return `<div class="page-head reveal"><div>${setup ? '<div class="kicker">Step 2 of 2</div>' : ''}<h1>${setup ? 'Where do you stand?' : 'Edit your lifts'}</h1>
-        <p class="muted">Six key lifts give a solid read on your strength. Enter a recent set you're confident in, at any reps. Skip any you don't do. <b>Nothing here is logged as a workout.</b></p></div></div>
+        <p class="muted">One key lift for each muscle group gives a solid read on your strength. Enter a recent set you're confident in, at any reps. Skip any you don't do. <b>Nothing here is logged as a workout.</b></p></div></div>
       <form id="lifts-form" class="reveal">
         <section class="card"><label>How long have you been lifting?
           <select name="months"><option value="">Choose…</option>${U.EXPERIENCE.map(([v, l]) => `<option value="${v}" ${p.trainingMonths === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></section>

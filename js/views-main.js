@@ -9,7 +9,7 @@
     const p = S().profile;
     return `<section class="welcome reveal">
       <div class="kicker">Step 1 of 2</div><h1>Let's set you up${window.CG_CLOUD?.user?.name ? ', ' + esc(window.CG_CLOUD.user.name.split(' ')[0]) : ''}</h1>
-      <p class="muted lead">A few basics so we can compare you fairly. Next, you'll enter your key lifts.</p>
+      <p class="muted lead">A few basics so we can compare you fairly. Next, you'll enter one key lift per muscle group.</p>
       <form id="setup-form" class="card form-grid">
         <label>Name <input name="name" value="${esc(p.name || (window.CG_CLOUD?.user?.name || '').split(' ')[0])}" placeholder="Optional" autocomplete="given-name"></label>
         <label>Units <select name="unit"><option value="kg" ${p.unit === 'kg' ? 'selected' : ''}>Kilograms</option><option value="lb" ${p.unit === 'lb' ? 'selected' : ''}>Pounds</option></select></label>
