@@ -121,6 +121,24 @@
     }).join('');
   };
 
+  /* ── Cloud sync card ── */
+  U.cloudCard = () => {
+    const cl = window.CG_CLOUD;
+    if (!cl || cl.status === 'unconfigured') return '';
+    const ago = (t) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`; };
+    const label = { syncing: 'Syncing…', synced: `Synced ${cl.lastSync ? ago(cl.lastSync) : ''}`, offline: 'Offline. Changes will sync when you reconnect.', error: `Sync problem: ${esc(cl.error || 'try again')}` }[cl.status] || '';
+    if (!cl.user) {
+      return `<section class="card reveal" id="cloud-card"><h2>Cloud sync</h2>
+        <p class="muted">Sign in with Google to back up your lifts and see them on every device. Free, and only you can read your data.</p>
+        <div class="actions"><button class="btn primary" data-act="cloud-signin">Sign in with Google</button></div>
+        ${cl.status === 'error' ? `<p class="muted small">${label}</p>` : ''}</section>`;
+    }
+    return `<section class="card reveal" id="cloud-card"><h2>Cloud sync</h2>
+      <div class="pr-row"><span>${cl.user.photo ? `<img src="${esc(cl.user.photo)}" alt="" width="28" height="28" style="border-radius:50%;vertical-align:middle;margin-right:.5rem" referrerpolicy="no-referrer">` : ''}<b>${esc(cl.user.name || cl.user.email)}</b> <span class="muted xs">${esc(cl.user.email)}</span></span></div>
+      <p class="muted small" id="cloud-status">${label}</p>
+      <div class="actions"><button class="btn ghost" data-act="cloud-sync">Sync now</button><button class="btn ghost" data-act="cloud-signout">Sign out</button></div></section>`;
+  };
+
   /* ── Settings ── */
   U.views.settings = () => {
     const p = S().profile;
@@ -133,8 +151,9 @@
         <label>Weekly goal <select name="goal">${[2, 3, 4, 5, 6].map((n) => `<option value="${n}" ${p.weeklyGoal === n ? 'selected' : ''}>${n} workouts / week</option>`).join('')}</select></label>
         <label>Rest timer <select name="rest">${[60, 90, 120, 150, 180, 240].map((n) => `<option value="${n}" ${(p.rest || 120) === n ? 'selected' : ''}>${n < 120 ? n + ' sec' : n / 60 + ' min'}</option>`).join('')}</select></label>
         <div class="span2 actions"><button class="btn primary" type="submit">Save profile</button></div></form></section>
+      ${U.cloudCard()}
       <section class="card reveal"><h2>Your data</h2>
-        <p class="muted">Everything is stored on this device. Export a backup now and then, especially before clearing your browser or switching phones.</p>
+        <p class="muted">${window.CG_CLOUD && window.CG_CLOUD.user ? 'Saved on this device and backed up to your Google account.' : 'Everything is stored on this device. Sign in above to back it up, or export a backup now and then.'}</p>
         <div class="actions"><button class="btn primary" data-act="export">${icon('download')} Export backup</button>
           <label class="btn ghost">${icon('upload')} Import backup<input type="file" accept="application/json,.json" id="import-file" hidden></label>
           <button class="btn ghost" data-act="demo">Load demo data</button><button class="btn danger" data-act="reset">${icon('trash')} Erase everything</button></div>

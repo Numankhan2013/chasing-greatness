@@ -194,8 +194,8 @@
       case 'del-custom':
         if (C.history(b.dataset.id).length && !confirm('This exercise has logged sets. Delete it and its sets?')) break;
         S().custom = S().custom.filter((c) => c.id !== b.dataset.id);
-        S().workouts.forEach((w) => { w.entries = w.entries.filter((en) => en.ex !== b.dataset.id); });
-        S().workouts = S().workouts.filter((w) => w.entries.length);
+        S().workouts.forEach((w) => { const n = w.entries.length; w.entries = w.entries.filter((en) => en.ex !== b.dataset.id); if (w.entries.length !== n) w.updatedAt = Date.now(); });
+        C.tombstoneMissing({ workouts: S().workouts }, Object.assign(S(), { workouts: S().workouts.filter((w) => w.entries.length) }));
         C.save(); render();
         break;
       case 'export': {
@@ -212,20 +212,42 @@
         {
           const dd = demoData();
           if (!C.currentBW()) S().profile.unit = 'kg';
-          S().workouts = dd.workouts; S().bodyweights = dd.bodyweights; S().profile.bodyweight = C.currentBW();
+          C.tombstoneMissing({ workouts: S().workouts }, Object.assign(S(), { workouts: dd.workouts }));
+          S().bodyweights = dd.bodyweights; S().profile.bodyweight = C.currentBW();
           st.draft = null; st.calc = null; U.clearDraft();
           C.save(); location.hash = '#/home'; render();
           toast('Demo data loaded. Erase it anytime in Settings.');
         }
         break;
       case 'reset':
-        if (confirm('Erase all workouts, weigh-ins and settings from this device?')) { C.replaceState(C.clone(C.DEFAULT)); st.draft = null; st.calc = null; U.clearDraft(); location.hash = '#/home'; render(); }
+        if (confirm(window.CG_CLOUD && window.CG_CLOUD.user ? 'Erase all workouts, weigh-ins and settings from this device AND your cloud backup?' : 'Erase all workouts, weigh-ins and settings from this device?')) { C.replaceState(C.clone(C.DEFAULT)); st.draft = null; st.calc = null; U.clearDraft(); location.hash = '#/home'; render(); }
+        break;
+      case 'cloud-signin':
+        window.CG_CLOUD.signIn().catch((err) => toast(`Sign-in failed: ${err.message || err}`));
+        break;
+      case 'cloud-signout':
+        if (confirm('Sign out? Your data stays on this device and in your cloud backup.')) window.CG_CLOUD.signOut().then(() => toast('Signed out.'));
+        break;
+      case 'cloud-sync':
+        window.CG_CLOUD.syncNow().then(() => { if (window.CG_CLOUD.status === 'synced') toast('All synced.'); });
         break;
       case 'rest-add': U.timer.end += 30000; U.timer.dur += 30; U.tickRest(); break;
       case 'rest-stop': U.stopRest(); break;
     }
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') U.closeSheet(); });
+
+  // Cloud sync: refresh the Settings card on status changes, and redraw when a merge brought new data.
+  if (window.CG_CLOUD) {
+    let lastUser = null;
+    window.CG_CLOUD.onChange((cl) => {
+      const uid = cl.user && cl.user.uid;
+      if (document.body.dataset.route === 'settings' && (uid !== lastUser || !$('#cloud-status'))) { lastUser = uid; render(); return; }
+      lastUser = uid;
+      const el = $('#cloud-status'); if (el) el.outerHTML = (new DOMParser().parseFromString(U.cloudCard(), 'text/html')).querySelector('#cloud-status')?.outerHTML || '';
+    });
+    document.addEventListener('cg:cloud-merged', () => { if (document.body.dataset.route !== 'log') render(); toast('Synced from the cloud.'); });
+  }
 
   render();
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('./sw.js').catch(() => {});

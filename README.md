@@ -1,7 +1,7 @@
 # Chasing Greatness 🏋️
 
 A personal strength tracker: log lifts, earn honest ranks, watch yourself climb.
-It's free and private, works offline, and runs as a static site on GitHub Pages.
+It's free and private, works offline, and lives on Firebase Hosting with optional Google sign-in to sync across devices.
 
 ## How ranks work
 
@@ -34,9 +34,26 @@ Built with: Clash Display + Satoshi (Fontshare), Geist Mono, Lucide icons, ApexC
 | `js/engine.js` | Storage, 1RM math, percentiles, ranks, stats |
 | `js/ui-core.js` | Emblems, charts, sheets, rest timer, animations |
 | `js/views-*.js` | Pages (main, ranks, log, progress/insights) |
+| `js/cloud.js` | Google sign-in + Firestore sync |
+| `js/firebase-config.js` | Public Firebase web config |
 | `js/app.js` | Routing + events |
 
+## Cloud sync (Firebase)
+
+- Sign in with Google in **Settings → Cloud sync**. Workouts, weigh-ins, profile and custom exercises back up to
+  Firestore under `users/{uid}`, and only you can read them (`firestore.rules`).
+- The device copy stays primary, so the app still works offline. Changes push a moment after you save, and the
+  app pulls and merges on sign-in, when it comes back to the foreground, and when it reconnects. The newest edit wins.
+  Deletions sync through tombstones.
+- Everything runs on Firebase's free Spark plan.
+
 ## Deploy
+
+**Firebase:** every push to the default branch runs `.github/workflows/firebase.yml`, which deploys Hosting and the
+Firestore rules to the `chasing-greatness` project. Auth uses keyless Workload Identity Federation.
+Live at https://chasing-greatness.web.app
+
+**GitHub Pages (legacy):**
 
 Settings → Pages → Source: **GitHub Actions**. Every push to the default branch deploys automatically.
 To deploy by hand, go to Actions → *Deploy to GitHub Pages* → Run workflow.

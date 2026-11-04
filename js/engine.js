@@ -49,12 +49,25 @@ window.CG = (() => {
     return clone(DEFAULT);
   }
   const api = { state: load(), storageOK: true };
-  function save() {
+  function save(opts = {}) {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(api.state)); api.storageOK = true; } catch (e) { api.storageOK = false; }
     memo = null;
+    if (!opts.silent && window.CG_CLOUD) window.CG_CLOUD.onSave();
     return api.storageOK;
   }
-  function replaceState(s) { api.state = normalize(s); save(); }
+  // Workouts that disappear in a replace (erase, import, demo) get tombstones so cloud sync deletes them too.
+  function tombstoneMissing(oldState, next) {
+    const keep = new Set(next.workouts.map((w) => w.id));
+    const known = new Set(next.deleted.map((t) => t.id));
+    const now = Date.now();
+    for (const w of oldState.workouts) if (!keep.has(w.id) && !known.has(w.id)) next.deleted.push({ id: w.id, at: now });
+    return next;
+  }
+  function replaceState(s, opts = {}) {
+    const next = normalize(s);
+    api.state = opts.silent ? next : tombstoneMissing(api.state, next);
+    save(opts);
+  }
 
   /* ── units ── */
   const unit = () => api.state.profile.unit;
@@ -306,7 +319,7 @@ window.CG = (() => {
   Object.assign(api, {
     TIERS, CATEGORIES, EXERCISES, STEPS, ROMAN, KG_PER_LB, DAY,
     pad, localISO, todayISO, parseDate, addDays, daysBetween, weekStart, clamp, uid, clone, round,
-    save, replaceState, normalize, DEFAULT,
+    save, replaceState, tombstoneMissing, normalize, DEFAULT,
     unit, toDisp, fromDisp, wNum, fmtW, plateUp,
     allExercises, exById, catById, isRanked,
     currentBW, bwAt, e1rm, eqReps, setMetric, fmtMetric,
