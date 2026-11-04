@@ -1,49 +1,65 @@
-/* Exercise catalogue + strength standards.
+/* Tiers, muscle groups and the exercise catalogue.
  *
- * Standards are 1RM / bodyweight ratios, one per tier (7 tiers).
- * They're adapted from widely published barbell strength standards
- * (beginner → world-class), stretched across seven tiers.
- * `f` is the multiplier applied for female lifters.
+ * Ranks are percentile-based: "stronger than X% of lifters" at your bodyweight and sex,
+ * using the Strength Level standards in standards.js. Each tier (except Mythic) has three
+ * divisions — III → II → I — so there's always a next step in sight.
  */
 window.CG_DATA = (() => {
+  // `from` = percentile floor. Experience notes follow Strength Level's level descriptions.
   const TIERS = [
-    { name: 'Rookie',    color: '#9aa4b2', glyph: 'I',   blurb: 'You showed up. That already beats most people.' },
-    { name: 'Contender', color: '#d08a4c', glyph: 'II',  blurb: 'The basics are locked in. Momentum is building.' },
-    { name: 'Warrior',   color: '#c9d3e0', glyph: 'III', blurb: 'Stronger than most people who walk into a gym.' },
-    { name: 'Champion',  color: '#f5c542', glyph: 'IV',  blurb: 'Years of consistent work show. People notice.' },
-    { name: 'Elite',     color: '#37d6c8', glyph: 'V',   blurb: 'Competitive-level strength. Rare air.' },
-    { name: 'Legend',    color: '#a98bff', glyph: 'VI',  blurb: 'Top-percentile strength. Stories get told.' },
-    { name: 'Mythic',    color: '#ff4d6d', glyph: 'VII', blurb: 'World-class. Rarer than unicorns.' },
+    { id: 'rookie',    name: 'Rookie',    from: 0,  color: '#9aa3b5', c2: '#5d6577', blurb: 'Learning the movements. The fastest gains of your life are right ahead.', exp: 'First months of training' },
+    { id: 'contender', name: 'Contender', from: 20, color: '#e0915a', c2: '#8a4a22', blurb: 'A real foundation. Stronger than 1 in 5 people who lift.', exp: 'Typical after ~6–12 months' },
+    { id: 'warrior',   name: 'Warrior',   from: 40, color: '#d6dde8', c2: '#7b8698', blurb: 'Around or above the average gym-goer. That takes consistency.', exp: 'Typical after ~1–2 years' },
+    { id: 'champion',  name: 'Champion',  from: 60, color: '#ffd25e', c2: '#a86f0c', blurb: 'Stronger than most people who lift. People notice.', exp: 'Typical after ~2–5 years' },
+    { id: 'elite',     name: 'Elite',     from: 80, color: '#4ee6d6', c2: '#0c7d78', blurb: 'Top 20% of lifters. Years of dedicated, smart training.', exp: 'Typical after 5+ years' },
+    { id: 'legend',    name: 'Legend',    from: 90, color: '#b49bff', c2: '#5a3fc4', blurb: 'Top 10%. This is competitive-level strength.', exp: 'Competitive lifters' },
+    { id: 'mythic',    name: 'Mythic',    from: 97, color: '#ff5a7a', c2: '#a1123a', blurb: 'Top 3% of lifters. Genuinely rare air.', exp: 'Top competitors' },
   ];
-  const UNRANKED = { name: 'Unranked', color: '#5b6472', glyph: '·', blurb: 'Log a lift to get ranked.' };
 
+  const CATEGORIES = [
+    { id: 'chest',     name: 'Chest',     weight: 1 },
+    { id: 'shoulders', name: 'Shoulders', weight: 1 },
+    { id: 'back',      name: 'Back',      weight: 1 },
+    { id: 'legs',      name: 'Legs',      weight: 1 },
+    { id: 'hinge',     name: 'Posterior', weight: 1, long: 'Glutes & hamstrings' },
+    { id: 'arms',      name: 'Arms',      weight: 0.5 },
+  ];
+
+  // kind: 'load' (barbell/machine 1RM), 'db' (per dumbbell), 'bw' (bodyweight reps; weight = added load).
   const EXERCISES = [
-    // Ranked lifts — the big five.
-    { id: 'bench',    name: 'Bench Press',    group: 'Ranked lifts', ranked: true, short: 'Bench',
-      std: [0.50, 0.75, 1.00, 1.25, 1.50, 1.75, 2.00], f: 0.62 },
-    { id: 'squat',    name: 'Back Squat',     group: 'Ranked lifts', ranked: true, short: 'Squat',
-      std: [0.75, 1.00, 1.25, 1.50, 1.75, 2.25, 2.75], f: 0.76 },
-    { id: 'deadlift', name: 'Deadlift',       group: 'Ranked lifts', ranked: true, short: 'Deadlift',
-      std: [1.00, 1.25, 1.50, 1.75, 2.25, 2.75, 3.00], f: 0.78 },
-    { id: 'ohp',      name: 'Overhead Press', group: 'Ranked lifts', ranked: true, short: 'OHP',
-      std: [0.35, 0.50, 0.65, 0.80, 1.00, 1.15, 1.30], f: 0.62 },
-    { id: 'row',      name: 'Barbell Row',    group: 'Ranked lifts', ranked: true, short: 'Row',
-      std: [0.50, 0.65, 0.85, 1.00, 1.25, 1.50, 1.75], f: 0.66 },
+    { id: 'bench',      name: 'Bench Press',              short: 'Bench',       cat: 'chest',     kind: 'load', std: 'bench', star: true },
+    { id: 'incline',    name: 'Incline Bench Press',      short: 'Incline',     cat: 'chest',     kind: 'load', std: 'incline' },
+    { id: 'dbbench',    name: 'Dumbbell Bench Press',     short: 'DB Bench',    cat: 'chest',     kind: 'db',   std: 'dbbench' },
+    { id: 'inclinedb',  name: 'Incline Dumbbell Press',   short: 'Incline DB',  cat: 'chest',     kind: 'db',   std: 'inclinedb' },
+    { id: 'dip',        name: 'Dip',                      short: 'Dip',         cat: 'chest',     kind: 'bw',   std: 'dip' },
+    { id: 'cablefly',   name: 'Cable Fly',                short: 'Cable Fly',   cat: 'chest',     kind: 'load' },
 
-    // Accessories — tracked, charted, not ranked.
-    { id: 'incline',   name: 'Incline Bench Press',   group: 'Push' },
-    { id: 'dbbench',   name: 'Dumbbell Bench Press',  group: 'Push' },
-    { id: 'dip',       name: 'Weighted Dip',          group: 'Push' },
-    { id: 'dbpress',   name: 'Dumbbell Shoulder Press', group: 'Push' },
-    { id: 'pullup',    name: 'Weighted Pull-up',      group: 'Pull' },
-    { id: 'pulldown',  name: 'Lat Pulldown',          group: 'Pull' },
-    { id: 'cablerow',  name: 'Seated Cable Row',      group: 'Pull' },
-    { id: 'curl',      name: 'Barbell Curl',          group: 'Pull' },
-    { id: 'frontsquat',name: 'Front Squat',           group: 'Legs' },
-    { id: 'rdl',       name: 'Romanian Deadlift',     group: 'Legs' },
-    { id: 'legpress',  name: 'Leg Press',             group: 'Legs' },
-    { id: 'hipthrust', name: 'Hip Thrust',            group: 'Legs' },
+    { id: 'ohp',        name: 'Overhead Press',           short: 'OHP',         cat: 'shoulders', kind: 'load', std: 'ohp', star: true },
+    { id: 'dbpress',    name: 'Dumbbell Shoulder Press',  short: 'DB Press',    cat: 'shoulders', kind: 'db',   std: 'dbpress' },
+    { id: 'lateral',    name: 'Lateral Raise',            short: 'Lat Raise',   cat: 'shoulders', kind: 'db' },
+
+    { id: 'row',        name: 'Barbell Row',              short: 'Row',         cat: 'back',      kind: 'load', std: 'row', star: true },
+    { id: 'pullup',     name: 'Pull-up',                  short: 'Pull-up',     cat: 'back',      kind: 'bw',   std: 'pullup' },
+    { id: 'chinup',     name: 'Chin-up',                  short: 'Chin-up',     cat: 'back',      kind: 'bw',   std: 'chinup' },
+    { id: 'pulldown',   name: 'Lat Pulldown',             short: 'Pulldown',    cat: 'back',      kind: 'load', std: 'pulldown' },
+    { id: 'cablerow',   name: 'Seated Cable Row',         short: 'Cable Row',   cat: 'back',      kind: 'load', std: 'cablerow' },
+    { id: 'dbrow',      name: 'Dumbbell Row',             short: 'DB Row',      cat: 'back',      kind: 'db',   std: 'dbrow' },
+
+    { id: 'squat',      name: 'Back Squat',               short: 'Squat',       cat: 'legs',      kind: 'load', std: 'squat', star: true },
+    { id: 'frontsquat', name: 'Front Squat',              short: 'Front Squat', cat: 'legs',      kind: 'load', std: 'frontsquat' },
+    { id: 'legpress',   name: 'Leg Press',                short: 'Leg Press',   cat: 'legs',      kind: 'load', std: 'legpress' },
+    { id: 'legext',     name: 'Leg Extension',            short: 'Leg Ext',     cat: 'legs',      kind: 'load' },
+    { id: 'calf',       name: 'Calf Raise',               short: 'Calves',      cat: 'legs',      kind: 'load' },
+
+    { id: 'deadlift',   name: 'Deadlift',                 short: 'Deadlift',    cat: 'hinge',     kind: 'load', std: 'deadlift', star: true },
+    { id: 'rdl',        name: 'Romanian Deadlift',        short: 'RDL',         cat: 'hinge',     kind: 'load', std: 'rdl' },
+    { id: 'hipthrust',  name: 'Hip Thrust',               short: 'Hip Thrust',  cat: 'hinge',     kind: 'load', std: 'hipthrust' },
+    { id: 'legcurl',    name: 'Leg Curl',                 short: 'Leg Curl',    cat: 'hinge',     kind: 'load' },
+
+    { id: 'curl',       name: 'Barbell Curl',             short: 'Curl',        cat: 'arms',      kind: 'load', std: 'curl' },
+    { id: 'dbcurl',     name: 'Dumbbell Curl',            short: 'DB Curl',     cat: 'arms',      kind: 'db',   std: 'dbcurl' },
+    { id: 'pushdown',   name: 'Tricep Pushdown',          short: 'Pushdown',    cat: 'arms',      kind: 'load', std: 'pushdown' },
   ];
 
-  return { TIERS, UNRANKED, EXERCISES };
+  return { TIERS, CATEGORIES, EXERCISES };
 })();
