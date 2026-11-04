@@ -122,7 +122,14 @@ window.CG = (() => {
     if (load <= 0) return 0;
     return Math.max(0, 30 * ((load * (1 + Math.min(reps, 40) / 30)) / bw - 1));
   }
-  function setMetric(ex, s, bwKg) { return ex.kind === 'bw' ? eqReps(s.w, s.r, bwKg) : e1rm(s.w, s.r); }
+  /* Optional effort ("reps in reserve"): reps you could still have done count toward the estimate.
+   * Skipped / unknown = 0, which is exactly the previous behaviour. */
+  const RIR = { '': 0, fail: 0, '1-2': 1.5, '3+': 3 };
+  const rirReps = (rir) => RIR[rir] ?? 0;
+  function setMetric(ex, s, bwKg) {
+    const r = s.r > 0 ? s.r + rirReps(s.rir) : s.r;
+    return ex.kind === 'bw' ? eqReps(s.w, r, bwKg) : e1rm(s.w, r);
+  }
   function fmtMetric(ex, v) { return ex.kind === 'bw' ? `${round(v, v < 10 ? 1 : 0)} reps` : fmtW(v); }
 
   /* ── percentiles ── */
@@ -198,7 +205,7 @@ window.CG = (() => {
         let best = 0, top = null, vol = 0, sets = 0;
         for (const s of en.sets) {
           if (!(s.r > 0)) continue;
-          const m = setMetric(ex, s, bw);
+          const m = setMetric(ex, en.rir ? { ...s, rir: en.rir } : s, bw);
           vol += (ex.kind === 'bw' ? bw + (s.w || 0) : s.w || 0) * s.r * (ex.kind === 'db' ? 2 : 1);
           sets++;
           if (m > best) { best = m; top = s; }
@@ -352,7 +359,7 @@ window.CG = (() => {
     save, replaceState, tombstoneMissing, normalize, DEFAULT,
     unit, toDisp, fromDisp, wNum, fmtW, plateUp,
     allExercises, exById, catById, isRanked,
-    currentBW, bwAt, e1rm, eqReps, setMetric, fmtMetric,
+    currentBW, bwAt, e1rm, eqReps, setMetric, fmtMetric, rirReps,
     anchors, toPct, fromPct, rankFromPct, rankOf, stepLabel,
     derived, history, bestOf, bestKnown, profilePoint, trainedExercises, liftRank, snapshot,
     weekStreak, sessionsThisWeek, prsSince, trend, volumeByWeek, setsByCategory, rankTimeline,

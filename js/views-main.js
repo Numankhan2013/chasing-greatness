@@ -8,6 +8,9 @@
   /* iOS-style segmented control built from radio buttons (works with FormData, no JS needed). */
   U.segmented = (name, opts, cur) => `<span class="seg" role="radiogroup">${opts.map(([v, l]) => `<label class="seg-opt"><input type="radio" name="${name}" value="${v}" ${String(cur) === String(v) ? 'checked' : ''}><span>${l}</span></label>`).join('')}</span>`;
 
+  /* Optional effort picker. Skip (default) = no adjustment, so being lazy costs nothing. */
+  U.effortSeg = (name, cur = '') => `<div class="effort"><span class="xs muted">How hard was it? <span class="opt">optional</span></span>${U.segmented(name, [['', 'Skip'], ['fail', 'Failure'], ['1-2', '1–2 left'], ['3+', '3+ left']], cur || '')}</div>`;
+
   U.setupView = () => {
     const p = S().profile, u = p.unit || 'kg';
     const first = esc(p.name || (window.CG_CLOUD?.user?.name || '').split(' ')[0]);

@@ -25,10 +25,10 @@
       <input type="number" inputmode="numeric" min="1" step="1" data-pf="r" value="${l ? l.r : ''}" placeholder="reps" aria-label="${esc(ex.name)} reps">
       <span class="pl-rank" data-lp="${ex.id}">${U.liftPreview(ex.id, w, l ? l.r : '')}</span></div>`;
   }
-  U.liftPreview = (exId, w, r) => {
+  U.liftPreview = (exId, w, r, rir = '') => {
     const ex = C.exById(exId), wv = parseFloat(w) || 0, rv = parseInt(r, 10) || 0;
     if (!(rv > 0) || (ex.kind !== 'bw' && !(wv > 0))) return '';
-    const res = C.rankOf(exId, C.setMetric(ex, { w: C.fromDisp(wv), r: rv }, C.currentBW()));
+    const res = C.rankOf(exId, C.setMetric(ex, { w: C.fromDisp(wv), r: rv, rir }, C.currentBW()));
     return res ? chip(res.tier, res.label) : '';
   };
 
@@ -141,7 +141,8 @@
         <label>Reps<input type="number" inputmode="numeric" min="1" step="1" name="r" value="${l ? l.r : ''}" placeholder="reps"></label>
       </div>
       <p class="muted xs">${hint}</p>
-      <div class="ls-preview" id="ls-preview">${U.liftPreview(exId, w, l ? l.r : '') || '<span class="muted small">Enter weight and reps to see your rank</span>'}</div>
+      ${U.effortSeg('rir', l?.rir)}
+      <div class="ls-preview" id="ls-preview">${U.liftPreview(exId, w, l ? l.r : '', l?.rir) || '<span class="muted small">Enter weight and reps to see your rank</span>'}</div>
       <button class="btn primary lg wide" type="submit">${icon('check')} ${l ? 'Update profile' : 'Add to my profile'}</button>
       <div class="ls-alt">${l ? `<button type="button" class="text-btn danger-text" data-act="remove-lift" data-id="${exId}">Remove from profile</button>` : ''}<a class="text-btn" href="#/log?ex=${exId}">Log as a workout instead</a></div>
     </form>`);
@@ -152,6 +153,7 @@
     if (!(r > 0) || (ex.kind !== 'bw' && !(w > 0))) { U.toast('Enter a weight and reps.'); return false; }
     const before = C.snapshot();
     S().lifts[id] = { w: C.fromDisp(w), r, date: C.todayISO() };
+    if (fd.get('rir')) S().lifts[id].rir = fd.get('rir');
     C.save();
     const after = C.snapshot(), lr = C.liftRank(id);
     const up = after.overall && before.overall && after.overall.step > before.overall.step;

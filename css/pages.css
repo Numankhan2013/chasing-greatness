@@ -279,3 +279,9 @@ button.grp-row { width: 100%; border: 0; border-top: 1px solid var(--line); back
   .gl-label { padding-top: 0; }
   .gl-verdict { margin-left: 0; }
 }
+
+/* Optional effort picker */
+.effort { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; margin-top: .75rem; padding-top: .7rem; border-top: 1px solid var(--line); }
+.effort .opt { color: var(--muted-2); }
+.effort .seg-opt span { padding: .28rem .6rem; font-size: .8125rem; }
+.lift-sheet .effort { border-top: 0; padding-top: 0; margin-top: 0; }

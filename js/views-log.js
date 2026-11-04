@@ -15,7 +15,7 @@
   U.newDraft = () => ({ id: null, mode: null, date: C.todayISO(), dateTouched: false, notes: '', showNotes: false, entries: [] });
   U.blankSet = blankSet;
   const editDraft = (w) => ({ id: w.id, mode: 'past', date: w.date, dateTouched: true, notes: w.notes || '', showNotes: !!w.notes,
-    entries: w.entries.map((en) => ({ ex: en.ex, sets: en.sets.map((s) => ({ w: s.w ? String(C.wNum(s.w)) : (C.exById(en.ex).kind === 'bw' ? '0' : ''), r: s.r ? String(s.r) : '', done: true })) })) });
+    entries: w.entries.map((en) => ({ ex: en.ex, rir: en.rir || '', sets: en.sets.map((s) => ({ w: s.w ? String(C.wNum(s.w)) : (C.exById(en.ex).kind === 'bw' ? '0' : ''), r: s.r ? String(s.r) : '', done: true })) })) });
   const sortedWorkouts = () => [...S().workouts].sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt - a.updatedAt);
 
   U.lastSession = (exId) => lastSession(exId);
@@ -108,13 +108,14 @@
             ${live ? `<button class="check" data-act="done-set" data-e="${ei}" data-s="${si}" aria-label="Mark set ${si + 1} done">${icon('check')}</button>` : ''}</div>`;
         }).join('')}</div>
       <div class="entry-foot"><div class="stepper"><button class="btn sm" data-act="rm-set" data-e="${ei}" aria-label="Remove last set" ${en.sets.length <= 1 ? 'disabled' : ''}>${icon('minus')}</button><span class="xs muted">Sets</span><button class="btn sm" data-act="add-set" data-e="${ei}" aria-label="Add a set">${icon('plus')}</button></div><div class="preview" data-preview="${ei}">${U.entryPreview(en)}</div></div>
+      ${ex.std ? U.effortSeg(`rir-${ei}`, en.rir) : ''}
       <div data-sanity="${ei}">${U.entrySanity(en, ei)}</div></section>`;
   }
 
   U.entryPreview = (en) => {
     const ex = C.exById(en.ex), bw = C.bwAt(st.draft.date) || C.currentBW();
     let best = 0;
-    for (const s of en.sets) { const w = parseFloat(s.w) || 0, r = parseInt(s.r, 10); if (r > 0 && (w > 0 || ex.kind === 'bw')) best = Math.max(best, C.setMetric(ex, { w: C.fromDisp(w), r }, bw)); }
+    for (const s of en.sets) { const w = parseFloat(s.w) || 0, r = parseInt(s.r, 10); if (r > 0 && (w > 0 || ex.kind === 'bw')) best = Math.max(best, C.setMetric(ex, { w: C.fromDisp(w), r, rir: en.rir }, bw)); }
     if (!best) return '';
     const prev = C.bestKnown(en.ex), isPR = prev && best > prev.best + 1e-6 && (!st.draft.id || prev.wid !== st.draft.id);
     const r = C.rankOf(en.ex, best);
@@ -127,7 +128,7 @@
     if (!ex.std) return '';
     const bw = C.bwAt(st.draft.date) || C.currentBW();
     let best = 0;
-    for (const s of en.sets) { const w = parseFloat(s.w) || 0, r = parseInt(s.r, 10); if (r > 0 && (w > 0 || ex.kind === 'bw')) best = Math.max(best, C.setMetric(ex, { w: C.fromDisp(w), r }, bw)); }
+    for (const s of en.sets) { const w = parseFloat(s.w) || 0, r = parseInt(s.r, 10); if (r > 0 && (w > 0 || ex.kind === 'bw')) best = Math.max(best, C.setMetric(ex, { w: C.fromDisp(w), r, rir: en.rir }, bw)); }
     const r = best ? C.rankOf(en.ex, best) : null;
     if (!r || r.pct < 97) return '';
     if (ex.kind === 'db') return `<div class="sanity">${icon('warn')}<span>That's top 3% of all lifters. <b>Did you add both dumbbells together?</b> Enter the weight of <b>one</b> dumbbell.</span><button class="btn sm" data-act="halve" data-e="${ei}">Use half</button></div>`;
@@ -176,7 +177,9 @@
     const d = st.draft;
     const entries = d.entries.map((en) => {
       const ex = C.exById(en.ex);
-      return { ex: en.ex, sets: en.sets.map((s) => ({ w: C.fromDisp(parseFloat(s.w) || 0), r: parseInt(s.r, 10) || 0 })).filter((s) => s.r > 0 && (s.w > 0 || ex.kind === 'bw' || !ex.std)) };
+      const out = { ex: en.ex, sets: en.sets.map((s) => ({ w: C.fromDisp(parseFloat(s.w) || 0), r: parseInt(s.r, 10) || 0 })).filter((s) => s.r > 0 && (s.w > 0 || ex.kind === 'bw' || !ex.std)) };
+      if (en.rir) out.rir = en.rir;
+      return out;
     }).filter((en) => en.sets.length);
     if (!entries.length) { toast('Enter weight and reps for at least one set.'); return; }
     const wasEdit = !!d.id, date = d.dateTouched ? d.date : C.todayISO();

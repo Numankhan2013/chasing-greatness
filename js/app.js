@@ -142,13 +142,20 @@
       U.persistDraft();
       return;
     }
-    if (el.closest('#lift-sheet-form')) { const f = el.closest('#lift-sheet-form'); $('#ls-preview').innerHTML = U.liftPreview(f.dataset.ex, f.elements.w.value, f.elements.r.value) || '<span class="muted small">Enter weight and reps to see your rank</span>'; return; }
+    if (el.closest('#lift-sheet-form')) { const f = el.closest('#lift-sheet-form'); $('#ls-preview').innerHTML = U.liftPreview(f.dataset.ex, f.elements.w.value, f.elements.r.value, f.elements.rir?.value || '') || '<span class="muted small">Enter weight and reps to see your rank</span>'; return; }
     if (el.dataset.pf) { const row = el.closest('.pl-row'); row.querySelector('[data-lp]').innerHTML = U.liftPreview(row.dataset.ex, row.querySelector('[data-pf=w]').value, row.querySelector('[data-pf=r]').value); return; }
     if (el.closest('#calc-form')) { st.calc[el.name] = el.value; $('#calc-result').innerHTML = U.calcResult(); }
   });
 
   document.addEventListener('change', (e) => {
     const el = e.target;
+    if (el.name && el.name.startsWith('rir-') && st.draft) {
+      const ei = +el.name.slice(4), en = st.draft.entries[ei];
+      en.rir = el.value; U.persistDraft();
+      $(`[data-preview="${ei}"]`).innerHTML = U.entryPreview(en);
+      $(`[data-sanity="${ei}"]`).innerHTML = U.entrySanity(en, ei);
+      return;
+    }
     if (el.id === 'log-date' && st.draft) { st.draft.date = el.value || C.todayISO(); st.draft.dateTouched = !!st.draft.id || st.draft.date !== C.todayISO(); U.persistDraft(); rerenderLog(); }
     if (el.name === 'unit' && el.closest('#setup-form')) {
       const bwIn = $('#setup-form [name=bw]'), f = el.value === 'lb' ? 1 / C.KG_PER_LB : C.KG_PER_LB;
