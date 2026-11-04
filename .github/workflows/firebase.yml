@@ -1,0 +1,32 @@
+name: Deploy to Firebase
+
+# Deploys the site to Firebase Hosting and publishes Firestore rules on every push to the
+# default branch, or on demand from the Actions tab. Auth is keyless (Workload Identity
+# Federation): no secrets are stored in this repo.
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: firebase
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/403315725957/locations/global/workloadIdentityPools/github/providers/github
+          service_account: github-deployer@chasing-greatness.iam.gserviceaccount.com
+          create_credentials_file: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npx -y firebase-tools@13 deploy --only hosting,firestore:rules --project chasing-greatness --non-interactive --debug 2>&1 | grep -v "^\[debug\].*Bearer" | tail -60; exit ${PIPESTATUS[0]}

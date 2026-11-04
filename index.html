@@ -4,8 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Chasing Greatness</title>
-  <meta name="description" content="A personal strength tracker: log lifts, earn ranks, see your progress. Free, private, offline.">
-  <meta name="theme-color" content="#0b0d12">
+  <meta name="description" content="Log lifts, earn ranks against 10.9M real lifts, see your progress. Free, offline, with optional Google sign-in to sync.">
+  <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Greatness">
@@ -14,26 +15,56 @@
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <!-- Apply the saved theme before first paint (no flash). Default follows the system. -->
+  <script>try { const t = localStorage.getItem('chasing-greatness.theme'); document.documentElement.dataset.theme = t || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'); } catch (e) { document.documentElement.dataset.theme = 'dark'; }</script>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/pages.css">
 </head>
 <body>
   <header class="topbar">
-    <a href="#/home" class="brand" aria-label="Chasing Greatness home">
-      <img src="icons/icon.svg" alt="" width="30" height="30">
-      <span>Chasing <b>Greatness</b></span>
-    </a>
-    <nav id="nav" class="nav" aria-label="Main"></nav>
+    <a href="#/home" class="brand" aria-label="Chasing Greatness home"><img src="icons/icon.svg" alt="" width="30" height="30"><span>Chasing <b>Greatness</b></span></a>
+    <div id="unit-slot" class="unit-slot"></div>
     <div id="mobile-actions" class="mobile-actions"></div>
   </header>
 
+  <!-- Outside the header on purpose: the header's backdrop-filter would trap position:fixed children. -->
+  <nav id="nav" class="nav" aria-label="Main"></nav>
   <main id="view" class="view"></main>
 
+  <div id="rest" class="rest" hidden>
+    <span class="rest-bar"><span id="rest-bar"></span></span>
+    <span class="rest-label">Rest</span><b id="rest-time" class="mono">2:00</b>
+    <button data-act="rest-add" class="rest-btn">+30s</button>
+    <button data-act="rest-stop" class="rest-btn" aria-label="Stop timer">✕</button>
+  </div>
+  <div id="sheet" class="sheet" hidden></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <div id="celebrate" class="celebrate" hidden></div>
-
   <noscript><p style="padding:2rem;color:#fff">This tracker needs JavaScript enabled.</p></noscript>
-  <script src="js/data.js"></script>
-  <script src="js/app.js"></script>
+
+  <!-- Libraries (pinned): GSAP (motion), canvas-confetti, ApexCharts (charts). Icons from Lucide are bundled in js/icons.js. -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.1/dist/apexcharts.min.js"></script>
+  <script defer src="js/icons.js"></script>
+  <script defer src="js/standards.js"></script>
+  <script defer src="js/data.js"></script>
+  <script defer src="js/engine.js"></script>
+  <script defer src="js/ui-core.js"></script>
+  <script defer src="js/views-main.js"></script>
+  <script defer src="js/views-ranks.js"></script>
+  <script defer src="js/views-log.js"></script>
+  <script defer src="js/views-data.js"></script>
+  <script defer src="js/insights-widgets.js"></script>
+  <script defer src="js/views-profile.js"></script>
+  <script defer src="js/views-lift.js"></script>
+  <!-- Firebase (Google sign-in + Firestore cloud sync), compat build so it works without a bundler. -->
+  <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script defer src="js/firebase-config.js"></script>
+  <script defer src="js/cloud.js"></script>
+  <script defer src="js/app.js"></script>
 </body>
 </html>
