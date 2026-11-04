@@ -21,10 +21,10 @@ It's free, it's private, and it works offline. No accounts and no subscription.
 
 ## Deploy to GitHub Pages
 
-1. Merge this branch into `main`.
-2. In the repo, go to **Settings → Pages → Build and deployment → Source** and pick **GitHub Actions**.
-3. The workflow in `.github/workflows/pages.yml` deploys on every push to `main`. Your site will be at
-   `https://<your-username>.github.io/chasing-greatness/`.
+1. In the repo, go to **Settings → Pages → Build and deployment → Source** and pick **GitHub Actions**.
+2. The workflow in `.github/workflows/pages.yml` deploys on every push to your default branch
+   (check the **Actions** tab). To redeploy by hand: Actions → *Deploy to GitHub Pages* → **Run workflow**.
+3. Your site will be at `https://<your-username>.github.io/chasing-greatness/`.
 
 ## Run locally
 
