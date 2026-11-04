@@ -9,11 +9,19 @@
  */
 window.CG_CLOUD = (() => {
   const C = window.CG;
-  const cfg = window.CG_FIREBASE_CONFIG;
+  /* On Firebase Hosting, finish sign-in on the app's own domain. With the default firebaseapp.com
+   * authDomain, redirect sign-in breaks in browsers that partition third-party storage (Safari,
+   * iOS home-screen apps, newer Chrome): the user returns signed out. Same-origin fixes that. */
+  const onFirebaseHost = /\.(web\.app|firebaseapp\.com)$/.test(location.hostname);
+  const cfg = window.CG_FIREBASE_CONFIG && { ...window.CG_FIREBASE_CONFIG, ...(onFirebaseHost ? { authDomain: location.hostname } : {}) };
+  const REDIRECT_KEY = 'chasing-greatness.auth-redirect';
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   const META_KEY = 'chasing-greatness.meta';
   const PULL_EVERY = 5 * 60 * 1000;
   const listeners = new Set();
-  const cloud = { ready: false, user: null, status: 'off', lastSync: 0, error: '' };
+  const cloud = { ready: false, user: null, status: 'off', lastSync: 0, error: '', redirecting: false };
+  try { cloud.redirecting = sessionStorage.getItem(REDIRECT_KEY) === '1'; } catch (e) { /* ignore */ }
 
   let db = null, auth = null, pushTimer = null, busy = false, again = false, lastPull = 0;
   const pushed = new Map();   // workout id -> updatedAt known to be in the cloud
@@ -152,12 +160,18 @@ window.CG_CLOUD = (() => {
     if (!auth) throw new Error('Cloud sync is not configured yet.');
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
+    const redirect = async () => {
+      try { sessionStorage.setItem(REDIRECT_KEY, '1'); } catch (e) { /* ignore */ }
+      await auth.signInWithRedirect(provider);
+    };
+    // Phones and home-screen apps: popups are unreliable there, and same-origin redirect is solid.
+    if (onFirebaseHost && (mobile || standalone)) return redirect();
     try {
       await auth.signInWithPopup(provider);
     } catch (e) {
-      if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/cancelled-popup-request'].includes(e.code)) {
-        await auth.signInWithRedirect(provider);
-      } else if (e.code !== 'auth/popup-closed-by-user') throw e;
+      if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/cancelled-popup-request'].includes(e.code) && onFirebaseHost) await redirect();
+      else if (e.code === 'auth/popup-blocked') throw new Error('Your browser blocked the sign-in window. Allow pop-ups for this site and try again.');
+      else if (e.code !== 'auth/popup-closed-by-user') throw e;
     }
   }
   async function signOut() {
@@ -176,7 +190,9 @@ window.CG_CLOUD = (() => {
       db = firebase.firestore();
     } catch (e) { setStatus('error', e.message); return; }
     cloud.ready = true;
-    auth.getRedirectResult().catch((e) => setStatus('error', e.message));
+    const doneRedirect = () => { cloud.redirecting = false; try { sessionStorage.removeItem(REDIRECT_KEY); } catch (e) { /* ignore */ } emit(); };
+    auth.getRedirectResult().then(doneRedirect, (e) => { doneRedirect(); setStatus('error', e.message); });
+    if (cloud.redirecting) setTimeout(() => { if (cloud.redirecting) doneRedirect(); }, 15000); // never hang on the splash
     auth.onAuthStateChanged((u) => {
       cloud.user = u ? { uid: u.uid, name: u.displayName || '', email: u.email || '', photo: u.photoURL || '' } : null;
       pushed.clear(); pushedMeta = ''; lastPull = 0;

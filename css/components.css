@@ -372,3 +372,28 @@ body[data-gate] .view { padding-bottom: 3rem; }
 .danger-row { color: var(--bad); }
 .pl-note { display: flex; gap: .5rem; align-items: flex-start; padding: 0 .3rem; }
 .pl-note .ic { color: var(--accent); width: 18px; height: 18px; flex: none; margin-top: .1rem; }
+
+/* ── Segmented control (iOS) ── */
+.seg { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--fill); flex: none; }
+.seg-opt { position: relative; display: block; cursor: pointer; text-transform: none; letter-spacing: 0; }
+.seg-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.seg-opt span { display: block; padding: .32rem .85rem; border-radius: 7px; font-size: .875rem; font-weight: 500; color: var(--text); transition: background .15s; }
+.seg-opt input:checked + span { background: #636366; box-shadow: 0 1px 3px rgba(0, 0, 0, .35); font-weight: 600; }
+.seg-opt input:focus-visible + span { outline: 2px solid var(--accent); }
+
+/* ── Top-bar kg | lb switch ── */
+.unit-slot { margin-left: .6rem; }
+.unit-toggle { display: inline-flex; padding: 2px; border: 0; border-radius: 8px; background: var(--fill); cursor: pointer; }
+.unit-toggle span { padding: .2rem .5rem; border-radius: 6px; font: 600 .78rem var(--font); color: var(--muted); }
+.unit-toggle span.on { background: #636366; color: #fff; }
+body[data-gate] .unit-slot { display: none; }
+@media (max-width: 860px) { .unit-slot { margin-left: auto; } .mobile-actions { margin-left: .35rem; } }
+
+/* ── Setup as a grouped list ── */
+.setup-list { display: flex; flex-direction: column; gap: 1rem; margin-top: .4rem; }
+.welcome h1 { font-size: 2rem; }
+.set-row-i .seg { margin-left: auto; }
+@media (max-width: 520px) {
+  body:not([data-gate]):not([data-onboard]) .brand span { display: none; }
+  .mobile-actions a { width: 36px; }
+}

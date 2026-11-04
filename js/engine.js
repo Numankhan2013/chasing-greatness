@@ -25,7 +25,7 @@ window.CG = (() => {
   /* ── state ── */
   const DEFAULT = {
     version: 2,
-    profile: { name: '', sex: 'male', unit: 'lb', bodyweight: null, weeklyGoal: 3, trainingMonths: null },
+    profile: { name: '', sex: 'male', unit: 'kg', bodyweight: null, weeklyGoal: 3, trainingMonths: null },
     lifts: {},        // strength profile: {exId: {w (kg), r, date}} — "what I can lift now", NOT workouts
     workouts: [],     // {id, date, notes, updatedAt, entries:[{ex, sets:[{w (kg), r}]}]}
     bodyweights: [],  // {date, kg}

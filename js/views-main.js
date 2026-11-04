@@ -5,18 +5,25 @@
   const { esc, icon, emblem, chip, bar, ladder, ring, tierInfo, pctTxt, fmtDate, relDate, afterRender, mountChart, MONTHS } = U;
   const S = () => C.state;
 
+  /* iOS-style segmented control built from radio buttons (works with FormData, no JS needed). */
+  U.segmented = (name, opts, cur) => `<span class="seg" role="radiogroup">${opts.map(([v, l]) => `<label class="seg-opt"><input type="radio" name="${name}" value="${v}" ${String(cur) === String(v) ? 'checked' : ''}><span>${l}</span></label>`).join('')}</span>`;
+
   U.setupView = () => {
-    const p = S().profile;
+    const p = S().profile, u = p.unit || 'kg';
+    const first = esc(p.name || (window.CG_CLOUD?.user?.name || '').split(' ')[0]);
     return `<section class="welcome reveal">
-      <div class="kicker">Step 1 of 2</div><h1>Let's set you up${window.CG_CLOUD?.user?.name ? ', ' + esc(window.CG_CLOUD.user.name.split(' ')[0]) : ''}</h1>
-      <p class="muted lead">A few basics so we can compare you fairly. Next, you'll enter one key lift per muscle group.</p>
-      <form id="setup-form" class="card form-grid">
-        <label>Name <input name="name" value="${esc(p.name || (window.CG_CLOUD?.user?.name || '').split(' ')[0])}" placeholder="Optional" autocomplete="given-name"></label>
-        <label>Units <select name="unit"><option value="kg" ${p.unit === 'kg' ? 'selected' : ''}>Kilograms</option><option value="lb" ${p.unit === 'lb' ? 'selected' : ''}>Pounds</option></select></label>
-        <label>Sex <select name="sex"><option value="male" ${p.sex === 'male' ? 'selected' : ''}>Male</option><option value="female" ${p.sex === 'female' ? 'selected' : ''}>Female</option></select></label>
-        <label>Bodyweight <input name="bw" type="number" inputmode="decimal" step="0.1" min="20" required placeholder="e.g. 75"></label>
-        <label>How long have you been lifting? <select name="months"><option value="">Choose…</option>${U.EXPERIENCE.map(([v, l]) => `<option value="${v}" ${p.trainingMonths === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-        <div class="span2 actions"><button class="btn primary lg" type="submit">Next: what can you lift? ${icon('arrowRight')}</button></div>
+      <div class="kicker">Step 1 of 2</div>
+      <h1>Let's set you up${first ? ', ' + first : ''}</h1>
+      <p class="muted lead">A few basics so we can compare you fairly. Next, one key lift per muscle group.</p>
+      <form id="setup-form" class="setup-list">
+        <section class="card list">
+          <label class="set-row-i"><span class="grow">Name</span><input name="name" value="${first}" placeholder="Optional" autocomplete="given-name"></label>
+          <div class="set-row-i"><span class="grow">Units</span>${U.segmented('unit', [['kg', 'kg'], ['lb', 'lb']], u)}</div>
+          <div class="set-row-i"><span class="grow"><span>Sex</span><span class="muted xs">Picks the right strength standards</span></span>${U.segmented('sex', [['male', 'Male'], ['female', 'Female']], p.sex || 'male')}</div>
+          <label class="set-row-i"><span class="grow"><span>Bodyweight</span><span class="muted xs">Ranks are relative to this</span></span><span class="with-unit"><input name="bw" type="number" inputmode="decimal" step="0.1" min="20" required placeholder="${u === 'lb' ? '165' : '75'}"><span class="muted" id="setup-unit">${u}</span></span></label>
+          <label class="set-row-i"><span class="grow">Lifting for</span><select name="months"><option value="">Choose…</option>${U.EXPERIENCE.map(([v, l]) => `<option value="${v}" ${p.trainingMonths === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        </section>
+        <button class="btn primary lg wide" type="submit">Continue ${icon('arrowRight')}</button>
       </form></section>`;
   };
 
@@ -165,7 +172,7 @@
           ${row('Bodyweight', `<span class="with-unit"><input name="bw" type="number" inputmode="decimal" step="0.1" min="20" value="${C.currentBW() ? C.wNum(C.currentBW()) : ''}"><span class="muted">${C.unit()}</span></span>`, 'Ranks are relative to this')}
           ${row('Sex', sel('sex', [['male', 'Male'], ['female', 'Female']], p.sex), 'Picks the right strength standards')}
           ${row('Lifting for', sel('months', [['', 'Choose…'], ...U.EXPERIENCE], p.trainingMonths ?? ''))}
-          ${row('Units', sel('unit', [['kg', 'Kilograms'], ['lb', 'Pounds']], p.unit))}
+          <div class="set-row-i"><span class="grow">Units</span>${U.segmented('unit', [['kg', 'kg'], ['lb', 'lb']], p.unit)}<span class="saved-tick" aria-hidden="true">${icon('check')}</span></div>
         </section>
         <h3 class="group-label reveal">Training</h3>
         <section class="card list reveal">

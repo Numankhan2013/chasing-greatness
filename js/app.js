@@ -17,6 +17,8 @@
   ];
   function renderNav(route) {
     $('#nav').innerHTML = NAV.map((n) => `<a href="#/${n.r}" class="${n.r === route ? 'on' : ''} ${n.desk ? 'desk' : ''} ${n.fab ? 'fab' : ''}" ${n.r === route ? 'aria-current="page"' : ''}><span class="nav-ic">${icon(n.icon)}</span><span class="nav-l">${n.label}</span></a>`).join('');
+    const un = C.unit();
+    $('#unit-slot').innerHTML = `<button class="unit-toggle" data-act="toggle-unit" aria-label="Units: ${un === 'kg' ? 'kilograms' : 'pounds'}. Tap to switch."><span class="${un === 'kg' ? 'on' : ''}">kg</span><span class="${un === 'lb' ? 'on' : ''}">lb</span></button>`;
     $('#mobile-actions').innerHTML = `<a href="#/profile" aria-label="Profile" class="${route === 'profile' ? 'on' : ''}">${icon('user')}</a><a href="#/history" aria-label="History" class="${route === 'history' ? 'on' : ''}">${icon('history')}</a><a href="#/settings" aria-label="Settings" class="${route === 'settings' ? 'on' : ''}">${icon('settings')}</a>`;
   }
   function parseRoute() {
@@ -31,6 +33,7 @@
   function gate() {
     const cl = window.CG_CLOUD;
     if (!cl || cl.status === 'unconfigured') return null;
+    if (cl.redirecting && !cl.user) return U.splashView('Signing you in…');
     if (cl.user) return !cl.lastSync && !C.currentBW() && !['error', 'offline'].includes(cl.status) ? U.splashView('Loading your profile…') : null;
     if (isGuest()) return null;
     if (cl.status === 'off' && !authTimedOut) return U.splashView('Loading…');
@@ -137,6 +140,12 @@
   document.addEventListener('change', (e) => {
     const el = e.target;
     if (el.id === 'log-date' && st.draft) { st.draft.date = el.value || C.todayISO(); st.draft.dateTouched = !!st.draft.id || st.draft.date !== C.todayISO(); U.persistDraft(); rerenderLog(); }
+    if (el.name === 'unit' && el.closest('#setup-form')) {
+      const bwIn = $('#setup-form [name=bw]'), f = el.value === 'lb' ? 1 / C.KG_PER_LB : C.KG_PER_LB;
+      if (bwIn.value && el.value !== C.unit()) bwIn.value = String(C.round(parseFloat(bwIn.value) * f, 1));
+      S().profile.unit = el.value; $('#setup-unit').textContent = el.value; bwIn.placeholder = el.value === 'lb' ? '165' : '75'; renderNav(parseRoute().route);
+      return;
+    }
     if (el.closest('#profile-form')) {
       applyProfile(new FormData(el.closest('#profile-form')));
       if (el.name === 'unit') { render(); toast('Units updated.'); return; }
@@ -258,6 +267,18 @@
       case 'reset':
         if (confirm(window.CG_CLOUD && window.CG_CLOUD.user ? 'Erase all workouts, weigh-ins and settings from this device AND your cloud backup?' : 'Erase all workouts, weigh-ins and settings from this device?')) { C.replaceState(C.clone(C.DEFAULT)); st.draft = null; st.calc = null; U.clearDraft(); location.hash = '#/home'; render(); }
         break;
+      case 'toggle-unit': {
+        const from = C.unit(), to = from === 'kg' ? 'lb' : 'kg';
+        const f = to === 'lb' ? 1 / C.KG_PER_LB : C.KG_PER_LB, cv = (v) => (v === '' || v == null || isNaN(parseFloat(v)) ? v : String(C.round(parseFloat(v) * f, 1)));
+        if (st.draft) st.draft.entries.forEach((en) => { if (C.exById(en.ex).kind !== 'bw' || parseFloat(en.sets[0]?.w)) en.sets.forEach((s0) => { s0.w = cv(s0.w); }); });
+        if (st.calc) { st.calc.w = cv(st.calc.w); st.calc.bw = cv(st.calc.bw); }
+        S().profile.unit = to; U.persistDraft(); C.save();
+        const sf = $('#setup-form'); const bwIn = sf && sf.querySelector('[name=bw]');
+        if (sf) { bwIn.value = cv(bwIn.value); sf.querySelector(`[name=unit][value=${to}]`).checked = true; $('#setup-unit').textContent = to; renderNav(parseRoute().route); }
+        else render();
+        toast(`Showing everything in ${to === 'kg' ? 'kilograms' : 'pounds'}.`);
+        break;
+      }
       case 'guest': try { localStorage.setItem(GUEST_KEY, '1'); } catch (err) { /* noop */ } render(); break;
       case 'cloud-signin':
         window.CG_CLOUD.signIn().catch((err) => toast(`Sign-in failed: ${err.message || err}`));
@@ -279,7 +300,7 @@
     let lastUser = null, lastGate = '';
     window.CG_CLOUD.onChange((cl) => {
       const uid = cl.user && cl.user.uid;
-      const gk = `${uid}|${cl.status === 'off'}|${!!cl.lastSync}|${cl.status === 'error'}`;
+      const gk = `${uid}|${cl.status === 'off'}|${!!cl.lastSync}|${cl.status === 'error'}|${!!cl.redirecting}`;
       if (gk !== lastGate && (document.body.dataset.gate || !lastGate || uid !== lastUser)) { lastGate = gk; lastUser = uid; render(); return; }
       lastGate = gk;
       if (document.body.dataset.route === 'settings' && (uid !== lastUser || !$('#cloud-status'))) { lastUser = uid; render(); return; }
