@@ -1,19 +1,21 @@
 /* Tiers, muscle groups and the exercise catalogue.
  *
- * Ranks are percentile-based: "stronger than X% of lifters" at your bodyweight and sex,
+ * Ranks are percentile-based (8 tiers: Rookie → Bronze → Silver → Gold → Diamond → Elite → Legend → Mythic): "stronger than X% of lifters" at your bodyweight and sex,
  * using the Strength Level standards in standards.js. Each tier (except Mythic) has three
  * divisions — III → II → I — so there's always a next step in sight.
  */
 window.CG_DATA = (() => {
   // `from` = percentile floor. Experience notes follow Strength Level's level descriptions.
   const TIERS = [
-    { id: 'rookie', ink: '#64748b',    name: 'Rookie',    from: 0,  color: '#9aa3b5', c2: '#5d6577', blurb: 'Learning the movements. The fastest gains of your life are right ahead.', exp: 'First months of training' },
-    { id: 'contender', ink: '#c2410c', name: 'Contender', from: 20, color: '#e0915a', c2: '#8a4a22', blurb: 'A real foundation. Stronger than 1 in 5 people who lift.', exp: 'Typical after ~6–12 months' },
-    { id: 'warrior', ink: '#475569',   name: 'Warrior',   from: 40, color: '#d6dde8', c2: '#7b8698', blurb: 'Around or above the average gym-goer. That takes consistency.', exp: 'Typical after ~1–2 years' },
-    { id: 'champion', ink: '#b45309',  name: 'Champion',  from: 60, color: '#ffd25e', c2: '#a86f0c', blurb: 'Stronger than most people who lift. People notice.', exp: 'Typical after ~2–5 years' },
-    { id: 'elite', ink: '#0f766e',     name: 'Elite',     from: 80, color: '#4ee6d6', c2: '#0c7d78', blurb: 'Top 20% of lifters. Years of dedicated, smart training.', exp: 'Typical after 5+ years' },
-    { id: 'legend', ink: '#6d28d9',    name: 'Legend',    from: 90, color: '#b49bff', c2: '#5a3fc4', blurb: 'Top 10%. This is competitive-level strength.', exp: 'Competitive lifters' },
-    { id: 'mythic', ink: '#be123c',    name: 'Mythic',    from: 97, color: '#ff5a7a', c2: '#a1123a', blurb: 'Top 3% of lifters. Genuinely rare air.', exp: 'Top competitors' },
+    // Matte iron: you're on the ladder. Then real metals, then the prestige tiers.
+    { id: 'rookie',  ink: '#52525b', name: 'Rookie',  from: 0,    color: '#8b8f98', c2: '#3f4249', blurb: 'Learning the movements. The fastest gains of your life are right ahead.', exp: 'First months of training' },
+    { id: 'bronze',  ink: '#9a4b17', name: 'Bronze',  from: 20,   color: '#d4884a', c2: '#7a3f17', blurb: 'A real foundation. Stronger than 1 in 5 people who lift.', exp: 'Typical after ~6–12 months' },
+    { id: 'silver',  ink: '#475569', name: 'Silver',  from: 33.3, color: '#dfe5ee', c2: '#7d8798', blurb: 'Solid, consistent strength. You\'re pulling away from beginners.', exp: 'Typical after ~1–2 years' },
+    { id: 'gold',    ink: '#a16207', name: 'Gold',    from: 46.7, color: '#ffd25e', c2: '#a86f0c', blurb: 'Stronger than the average gym-goer. That takes real work.', exp: 'Typical after ~2–3 years' },
+    { id: 'diamond', ink: '#0369a1', name: 'Diamond', from: 60,   color: '#8fd8ff', c2: '#1f6fa8', blurb: 'Stronger than most people who lift. People notice.', exp: 'Typical after ~3–5 years' },
+    { id: 'elite',   ink: '#047857', name: 'Elite',   from: 80,   color: '#4ee6b0', c2: '#0b7a58', blurb: 'Top 20% of lifters. Years of dedicated, smart training.', exp: 'Typical after 5+ years' },
+    { id: 'legend',  ink: '#6d28d9', name: 'Legend',  from: 90,   color: '#b49bff', c2: '#5a3fc4', blurb: 'Top 10%. This is competitive-level strength.', exp: 'Competitive lifters' },
+    { id: 'mythic',  ink: '#be123c', name: 'Mythic',  from: 97,   color: '#ff5a7a', c2: '#a1123a', blurb: 'Top 3% of lifters. Genuinely rare air.', exp: 'Top competitors' },
   ];
 
   const CATEGORIES = [

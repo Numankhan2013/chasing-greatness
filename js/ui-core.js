@@ -51,7 +51,8 @@ window.UI = (() => {
     charts.push(c);
   }
 
-  /* emblems: hexagon core; Champion+ laurels, Elite+ wings, Mythic crown; pips = division */
+  /* Emblems: hexagon core. Rookie = matte iron ring; Bronze/Silver/Gold = 1/2/3 chevrons in their metal;
+   * Diamond = gem + laurels; Elite = star + wings; Legend = star + chevron; Mythic = crown. Pips = division. */
   let seq = 0;
   const hexPts = (cx, cy, r) => Array.from({ length: 6 }, (_, i) => { const a = (Math.PI / 3) * i - Math.PI / 2; return `${(cx + r * Math.cos(a)).toFixed(2)},${(cy + r * Math.sin(a)).toFixed(2)}`; }).join(' ');
   function starPath(cx, cy, R, r) {
@@ -59,22 +60,25 @@ window.UI = (() => {
     for (let i = 0; i < 10; i++) { const a = (Math.PI / 5) * i - Math.PI / 2, rr = i % 2 ? r : R; d += `${i ? 'L' : 'M'}${(cx + rr * Math.cos(a)).toFixed(2)},${(cy + rr * Math.sin(a)).toFixed(2)}`; }
     return d + 'Z';
   }
+  const TOP = TIERS.length - 1;
   function emblem(tier, size = 64, div = 0) {
     const tt = tierInfo(tier), t = { ...tt, color: tt.metal }, id = 'em' + ++seq, ranked = tier != null && tier >= 0;
     let back = '', front = '';
-    if (tier >= 4) for (const [x, y, ang, rx] of [[4, 36, -28, 19], [0, 50, -8, 17], [5, 64, 14, 14]]) {
+    if (tier >= 5) for (const [x, y, ang, rx] of [[4, 36, -28, 19], [0, 50, -8, 17], [5, 64, 14, 14]]) {
       back += `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="5.2" transform="rotate(${ang} ${x} ${y})" fill="url(#${id}w)"/><ellipse cx="${100 - x}" cy="${y}" rx="${rx}" ry="5.2" transform="rotate(${-ang} ${100 - x} ${y})" fill="url(#${id}w)"/>`;
     }
-    if (tier >= 3) for (let k = 0; k < 6; k++) {
+    if (tier >= 4) for (let k = 0; k < 6; k++) {
       const a = ((118 + k * 17) * Math.PI) / 180, x = 50 + 47 * Math.cos(a), y = 54 + 47 * Math.sin(a), rot = (a * 180) / Math.PI + 65;
       back += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="6.5" ry="2.6" transform="rotate(${rot.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})" fill="${t.color}" opacity=".85"/><ellipse cx="${(100 - x).toFixed(1)}" cy="${y.toFixed(1)}" rx="6.5" ry="2.6" transform="rotate(${(-rot).toFixed(1)} ${(100 - x).toFixed(1)} ${y.toFixed(1)})" fill="${t.color}" opacity=".85"/>`;
     }
-    if (tier === 6) front = `<path d="M35,13 L31,-3 L42,5 L50,-8 L58,5 L69,-3 L65,13 Z" fill="url(#${id}g)" stroke="${t.color}" stroke-width="1"/>`;
+    if (tier === TOP) front = `<path d="M35,13 L31,-3 L42,5 L50,-8 L58,5 L69,-3 L65,13 Z" fill="url(#${id}g)" stroke="${t.color}" stroke-width="1"/>`;
     const chev = (y, w = 5, o = 1) => `<path d="M39,${y + 6} L50,${y - 3} L61,${y + 6}" fill="none" stroke="${t.color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" opacity="${o}"/>`;
     let glyph;
-    if (!ranked) glyph = `<text x="50" y="61" text-anchor="middle" font-family="-apple-system, Inter, sans-serif" font-weight="700" font-size="26" fill="${t.color}">?</text>`;
-    else if (tier <= 2) glyph = [[52], [56, 46], [61, 51, 41]][tier].map((y) => chev(y)).join('');
-    else glyph = `<path d="${starPath(50, tier >= 4 ? 46 : 50, tier >= 4 ? 13 : 15, tier >= 4 ? 5.6 : 6.4)}" fill="${t.color}"/>` + (tier === 4 ? chev(64) : tier >= 5 ? chev(63) + chev(71, 3.5, 0.7) : '');
+    if (!ranked) glyph = `<text x="50" y="61" text-anchor="middle" font-family="Geist, -apple-system, sans-serif" font-weight="700" font-size="26" fill="${t.color}">?</text>`;
+    else if (tier === 0) glyph = `<circle cx="50" cy="52" r="8" fill="none" stroke="${t.color}" stroke-width="4.5"/>`;
+    else if (tier <= 3) glyph = [[52], [56, 46], [61, 51, 41]][tier - 1].map((y) => chev(y)).join('');
+    else if (tier === 4) glyph = `<path d="M37,45 L43,37 L57,37 L63,45 L50,65 Z" fill="${t.color}"/><path d="M37,45 L63,45 M43,37 L47,45 L50,65 L53,45 L57,37" fill="none" stroke="${t.c2}" stroke-width="1.6" stroke-linejoin="round"/>`;
+    else glyph = `<path d="${starPath(50, tier === 5 ? 50 : 46, 13, 5.6)}" fill="${t.color}"/>` + (tier >= 6 ? chev(64) : '');
     const np = 4 - div;
     const pips = ranked && div ? Array.from({ length: np }, (_, i) => { const x = 50 + (i - (np - 1) / 2) * 9; return `<path d="M${x},81 l3.2,3.2 l-3.2,3.2 l-3.2,-3.2Z" fill="${t.color}"/>`; }).join('') : '';
     const shine = tier >= 3 && !reduceMotion ? `<rect x="-60" y="0" width="40" height="110" fill="url(#${id}s)" clip-path="url(#${id}c)" transform="skewX(-20)"><animate attributeName="x" values="-60;160;160" keyTimes="0;.45;1" dur="${4 + (seq % 3)}s" repeatCount="indefinite"/></rect>` : '';

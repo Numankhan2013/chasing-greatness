@@ -8,7 +8,8 @@
   // One common lift per muscle group, so a new profile covers all six groups from day one.
   const CORE = ['bench', 'ohp', 'pullup', 'squat', 'deadlift', 'curl'];
   U.EXPERIENCE = [[3, 'Under 6 months'], [9, '6–12 months'], [18, '1–2 years'], [42, '2–5 years'], [72, '5+ years']];
-  const expectedTier = (m) => (m < 6 ? 0 : m < 12 ? 1 : m < 24 ? 2 : m < 60 ? 3 : 4);
+  // Typical tier by training age (Strength Level: novice ≈ 6 months, intermediate ≈ 2 years, advanced 5+).
+  const expectedTier = (m) => (m < 6 ? 0 : m < 12 ? 1 : m < 24 ? 2 : m < 60 ? 3 : 5);
   const expLabel = (m) => (U.EXPERIENCE.find(([v]) => v === m) || [0, ''])[1];
 
   /* ── builder ── */

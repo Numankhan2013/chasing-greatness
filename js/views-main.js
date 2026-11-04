@@ -135,7 +135,7 @@
   U.landingView = () => {
     const cl = window.CG_CLOUD;
     return `<section class="landing">
-      <div class="landing-emblems">${[1, 3, 4, 6].map((t) => emblem(t, 54, 1)).join('')}</div>
+      <div class="landing-emblems">${[1, 3, 4, 7].map((t) => emblem(t, 54, 1)).join('')}</div>
       <h1 class="display">Chase<br><span class="grad">greatness.</span></h1>
       <p class="lead muted">See exactly where your strength stands, ranked against <b>10.9 million real lifts</b> at your bodyweight. Then watch yourself climb.</p>
       <ul class="landing-points"><li>${icon('trophy')} Honest ranks for 22 exercises</li><li>${icon('chart')} Progress, projections and insights</li><li>${icon('cloud')} Synced across all your devices</li></ul>
