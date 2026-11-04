@@ -15,6 +15,9 @@ window.CG_CLOUD = (() => {
   const onFirebaseHost = /\.(web\.app|firebaseapp\.com)$/.test(location.hostname);
   const cfg = window.CG_FIREBASE_CONFIG && { ...window.CG_FIREBASE_CONFIG, ...(onFirebaseHost ? { authDomain: location.hostname } : {}) };
   const REDIRECT_KEY = 'chasing-greatness.auth-redirect';
+  const OWNER_KEY = 'chasing-greatness.owner';   // which account the data on this device belongs to
+  const getOwner = () => { try { return localStorage.getItem(OWNER_KEY); } catch (e) { return null; } };
+  const setOwner = (uid) => { try { if (uid) localStorage.setItem(OWNER_KEY, uid); else localStorage.removeItem(OWNER_KEY); } catch (e) { /* ignore */ } };
   const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   const META_KEY = 'chasing-greatness.meta';
@@ -38,6 +41,16 @@ window.CG_CLOUD = (() => {
   function touchMeta() {
     const m = localMeta(), j = metaJSON(C.state);
     if (m.json !== j) writeLocalMeta({ json: j, at: Date.now() });
+  }
+
+  /* Clear this device's copy (the cloud keeps everything). The meta edit time is set to 0 and no
+   * tombstones are written, so the empty copy can never overwrite cloud data on the next sync. */
+  function wipeLocal() {
+    C.replaceState(C.clone(C.DEFAULT), { silent: true });
+    writeLocalMeta({ json: metaJSON(C.state), at: 0 });
+    try { localStorage.removeItem('chasing-greatness.draft'); } catch (e) { /* ignore */ }
+    pushed.clear(); pushedMeta = ''; lastPull = 0;
+    document.dispatchEvent(new CustomEvent('cg:local-reset'));
   }
 
   const userRef = () => db.collection('users').doc(cloud.user.uid);
@@ -105,6 +118,7 @@ window.CG_CLOUD = (() => {
     await commitOps(ops);
     pushedMeta = mj;
     lastPull = Date.now();
+    setOwner(cloud.user.uid);
     return JSON.stringify(C.state) !== before;
   }
 
@@ -174,10 +188,19 @@ window.CG_CLOUD = (() => {
       else if (e.code !== 'auth/popup-closed-by-user') throw e;
     }
   }
-  async function signOut() {
+  /* Sign out = last sync, then clear this device so the next account starts clean.
+   * Refuses (unless forced) when the last sync failed, so unsynced changes aren't lost. */
+  async function signOut(force = false) {
     if (!auth) return;
-    if (cloud.user) await run(false);
+    if (cloud.user) {
+      await run(false);
+      if (!force && ['error', 'offline'].includes(cloud.status)) {
+        const err = new Error('Some changes have not synced yet.'); err.code = 'unsynced'; throw err;
+      }
+    }
     await auth.signOut();
+    wipeLocal();
+    setOwner(null);
   }
   const syncNow = () => run(true);
   const onChange = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
@@ -196,6 +219,8 @@ window.CG_CLOUD = (() => {
     auth.onAuthStateChanged((u) => {
       cloud.user = u ? { uid: u.uid, name: u.displayName || '', email: u.email || '', photo: u.photoURL || '' } : null;
       pushed.clear(); pushedMeta = ''; lastPull = 0;
+      // Data on this device belongs to a different account: start this one clean.
+      if (u && getOwner() && getOwner() !== u.uid) wipeLocal();
       if (u) run(true); else setStatus('signed-out');
     });
     document.addEventListener('visibilitychange', () => {

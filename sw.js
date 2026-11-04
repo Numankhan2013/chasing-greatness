@@ -1,5 +1,5 @@
 // Offline support: app shell precached; CDN libraries and fonts cached on first use.
-const CACHE = 'cg-v9';
+const CACHE = 'cg-v10';
 const SHELL = ['./', 'index.html', 'css/base.css', 'css/components.css', 'js/icons.js', 'js/standards.js', 'js/data.js', 'js/engine.js',
   'js/ui-core.js', 'js/views-main.js', 'js/views-ranks.js', 'js/views-log.js', 'js/views-data.js', 'js/views-profile.js', 'js/firebase-config.js', 'js/cloud.js', 'js/app.js',
   'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png'];

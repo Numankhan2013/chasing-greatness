@@ -28,12 +28,12 @@
   /* Sign-in gate: visitors see the landing page until they sign in (or choose guest mode). */
   const GUEST_KEY = 'chasing-greatness.guest';
   const isGuest = () => { try { return localStorage.getItem(GUEST_KEY) === '1'; } catch (e) { return false; } };
-  let authTimedOut = false;
+  let authTimedOut = false, signingIn = false;
   setTimeout(() => { authTimedOut = true; if (document.body.dataset.gate) render(); }, 5000);
   function gate() {
     const cl = window.CG_CLOUD;
     if (!cl || cl.status === 'unconfigured') return null;
-    if (cl.redirecting && !cl.user) return U.splashView('Signing you in…');
+    if ((cl.redirecting || signingIn) && !cl.user) return U.splashView('Signing you in…');
     if (cl.user) return !cl.lastSync && !C.currentBW() && !['error', 'offline'].includes(cl.status) ? U.splashView('Loading your profile…') : null;
     if (isGuest()) return null;
     if (cl.status === 'off' && !authTimedOut) return U.splashView('Loading…');
@@ -281,11 +281,21 @@
       }
       case 'guest': try { localStorage.setItem(GUEST_KEY, '1'); } catch (err) { /* noop */ } render(); break;
       case 'cloud-signin':
-        window.CG_CLOUD.signIn().catch((err) => toast(`Sign-in failed: ${err.message || err}`));
+        // Show progress right away: Google's hand-off takes a few seconds after the account is picked.
+        signingIn = true; render();
+        window.CG_CLOUD.signIn()
+          .then(() => setTimeout(() => { if (!window.CG_CLOUD.user && signingIn) { signingIn = false; render(); } }, 4000))
+          .catch((err) => { signingIn = false; render(); toast(`Sign-in failed: ${U.esc(err.message || String(err))}`); });
         break;
-      case 'cloud-signout':
-        if (confirm('Sign out? Your data stays safe in your Google account.')) window.CG_CLOUD.signOut().then(() => { try { localStorage.removeItem(GUEST_KEY); } catch (err) { /* noop */ } location.hash = '#/home'; render(); });
+      case 'cloud-signout': {
+        const out = (force) => window.CG_CLOUD.signOut(force).then(() => { try { localStorage.removeItem(GUEST_KEY); } catch (err) { /* noop */ } location.hash = '#/home'; render(); toast('Signed out. Your data is safe in your account.'); });
+        if (!confirm('Sign out? Your data stays safe in your Google account and is removed from this device.')) break;
+        out(false).catch((err) => {
+          if (err.code === 'unsynced' && confirm('Some recent changes haven\'t synced yet (you may be offline). Sign out anyway and lose them?')) out(true).catch((e2) => toast(U.esc(e2.message)));
+          else if (err.code !== 'unsynced') toast(U.esc(err.message || String(err)));
+        });
         break;
+      }
       case 'cloud-sync':
         window.CG_CLOUD.syncNow().then(() => { if (window.CG_CLOUD.status === 'synced') toast('All synced.'); });
         break;
@@ -300,6 +310,7 @@
     let lastUser = null, lastGate = '';
     window.CG_CLOUD.onChange((cl) => {
       const uid = cl.user && cl.user.uid;
+      if (uid) signingIn = false;
       const gk = `${uid}|${cl.status === 'off'}|${!!cl.lastSync}|${cl.status === 'error'}|${!!cl.redirecting}`;
       if (gk !== lastGate && (document.body.dataset.gate || !lastGate || uid !== lastUser)) { lastGate = gk; lastUser = uid; render(); return; }
       lastGate = gk;
@@ -307,6 +318,8 @@
       lastUser = uid;
       const el = $('#cloud-status'); if (el) el.outerHTML = (new DOMParser().parseFromString(U.cloudCard(), 'text/html')).querySelector('#cloud-status')?.outerHTML || '';
     });
+    // Device data was cleared (sign-out or a different account): drop in-memory drafts too.
+    document.addEventListener('cg:local-reset', () => { st.draft = null; st.stash = null; st.calc = null; U.stopRest(); });
     document.addEventListener('cg:cloud-merged', () => { if (document.body.dataset.route !== 'log') render(); toast('Synced from the cloud.'); });
   }
 
