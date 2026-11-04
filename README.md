@@ -1,44 +1,48 @@
 # Chasing Greatness 🏋️
 
-A personal strength tracker: log your lifts, earn ranks, and watch yourself get stronger.
-It's free, it's private, and it works offline. No accounts and no subscription.
+A personal strength tracker: log lifts, earn honest ranks, watch yourself climb.
+It's free and private, works offline, and runs as a static site on GitHub Pages.
+
+## How ranks work
+
+- Every set gets an **estimated 1RM** (Epley). Reps above 10 count as 10, because high-rep sets inflate estimates.
+  Pull-ups, chin-ups and dips use bodyweight reps, and added weight converts into extra reps.
+- That estimate is compared with **Strength Level's standards** (about 10.9M real logged lifts, 2015–2026)
+  **at your bodyweight and sex**, which gives a percentile: "stronger than X% of lifters".
+- Percentile → tier: Rookie (0–20) · Contender (20–40) · Warrior (40–60) · Champion (60–80) · Elite (80–90) ·
+  Legend (90–97) · Mythic (97+). Each tier has three divisions, III → II → I.
+- **22 ranked exercises** across 6 muscle groups. A group ranks by your best exercise in it. Overall is the
+  average of your groups (arms count half).
 
 ## Features
 
-- **Ranks**: seven tiers (Rookie → Contender → Warrior → Champion → Elite → Legend → Mythic) for
-  Bench, Squat, Deadlift, Overhead Press and Barbell Row. Each tier compares your estimated 1RM to
-  your bodyweight. Your overall rank is the average across those lifts.
-- **Rank calculator**: answers "if I lift 225, what am I?" for any lift, rep count and bodyweight.
-- **Workout logging**: sets × reps × weight, a live est.-1RM/rank preview as you type, "last time" hints,
-  custom exercises, and editing past workouts.
-- **PRs and rank-ups**: automatic PR detection and a celebration screen when you rank up.
-- **Progress**: est.-1RM charts with rank thresholds drawn in, a PR timeline, weekly volume, and a bodyweight log.
-- **Insights**: streaks, stalls, neglected lifts, weak links, volume trends, and a projected date
-  for your next rank based on your actual rate of progress.
-- **Consistency heatmap** covering the last 6 months.
-- **Installable**: add it to your home screen and it runs like a native app, offline included.
-- **Your data stays yours**: it's stored in your browser's localStorage. Use Settings → Export backup to save a JSON file.
+- Exercise-first logging. The date defaults to today and lives in a small chip for backdating. Last time's
+  numbers show as hints, and ✓ completes a set and starts the rest timer. Drafts survive closing the app.
+- Ranks page with per-exercise tier ladders (exact kg needed at your bodyweight) and a what-if calculator.
+- Insights: rank over time, projected rank-ups, strength radar, weekly sets per muscle, imbalances, stalls, PRs.
+- Progress charts with tier lines, rep records, weekly volume, and a bodyweight log.
+- Installable PWA that works offline. Backups export and import as JSON.
 
-## Deploy to GitHub Pages
+Built with: Clash Display + Satoshi (Fontshare), Geist Mono, Lucide icons, ApexCharts, GSAP, canvas-confetti.
 
-1. In the repo, go to **Settings → Pages → Build and deployment → Source** and pick **GitHub Actions**.
-2. The workflow in `.github/workflows/pages.yml` deploys on every push to your default branch
-   (check the **Actions** tab). To redeploy by hand: Actions → *Deploy to GitHub Pages* → **Run workflow**.
-3. Your site will be at `https://<your-username>.github.io/chasing-greatness/`.
+## Code map
+
+| File | What |
+|---|---|
+| `js/standards.js` | Strength standards by bodyweight (generated) |
+| `js/data.js` | Tiers, muscle groups, exercise catalogue |
+| `js/engine.js` | Storage, 1RM math, percentiles, ranks, stats |
+| `js/ui-core.js` | Emblems, charts, sheets, rest timer, animations |
+| `js/views-*.js` | Pages (main, ranks, log, progress/insights) |
+| `js/app.js` | Routing + events |
+
+## Deploy
+
+Settings → Pages → Source: **GitHub Actions**. Every push to the default branch deploys automatically.
+To deploy by hand, go to Actions → *Deploy to GitHub Pages* → Run workflow.
 
 ## Run locally
 
-It's plain HTML/CSS/JS with no build step:
-
 ```sh
-python3 -m http.server 8000   # then open http://localhost:8000
+python3 -m http.server 8000   # open http://localhost:8000
 ```
-
-## Customize
-
-- Tier names, colors and lift standards live in `js/data.js`.
-- Add exercises to `EXERCISES` in the same file, or use "+ Add custom exercise" in the app.
-- If you change cached files, bump `CACHE` in `sw.js` so installed copies pick up the update.
-
-> Note: data lives per browser and per device. Export a backup before you clear site data or switch phones,
-> then import it on the new device.
