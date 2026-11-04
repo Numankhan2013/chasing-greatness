@@ -11,12 +11,13 @@
     { r: 'log', label: 'Log', icon: 'plus', fab: true },
     { r: 'progress', label: 'Progress', icon: 'chart' },
     { r: 'insights', label: 'Insights', icon: 'bulb' },
+    { r: 'profile', label: 'Profile', icon: 'user', desk: true },
     { r: 'history', label: 'History', icon: 'history', desk: true },
     { r: 'settings', label: 'Settings', icon: 'settings', desk: true },
   ];
   function renderNav(route) {
     $('#nav').innerHTML = NAV.map((n) => `<a href="#/${n.r}" class="${n.r === route ? 'on' : ''} ${n.desk ? 'desk' : ''} ${n.fab ? 'fab' : ''}" ${n.r === route ? 'aria-current="page"' : ''}><span class="nav-ic">${icon(n.icon)}</span><span class="nav-l">${n.label}</span></a>`).join('');
-    $('#mobile-actions').innerHTML = `<a href="#/history" aria-label="History" class="${route === 'history' ? 'on' : ''}">${icon('history')}</a><a href="#/settings" aria-label="Settings" class="${route === 'settings' ? 'on' : ''}">${icon('settings')}</a>`;
+    $('#mobile-actions').innerHTML = `<a href="#/profile" aria-label="Profile" class="${route === 'profile' ? 'on' : ''}">${icon('user')}</a><a href="#/history" aria-label="History" class="${route === 'history' ? 'on' : ''}">${icon('history')}</a><a href="#/settings" aria-label="Settings" class="${route === 'settings' ? 'on' : ''}">${icon('settings')}</a>`;
   }
   function parseRoute() {
     const [path, qs] = location.hash.replace(/^#\/?/, '').split('?');
@@ -63,6 +64,7 @@
     const p = S().profile;
     p.name = (fd.get('name') || '').trim(); p.sex = fd.get('sex'); p.unit = fd.get('unit');
     if (fd.get('goal')) p.weeklyGoal = +fd.get('goal');
+    if (fd.get('months')) p.trainingMonths = +fd.get('months');
     if (fd.get('rest')) p.rest = +fd.get('rest');
     const bw = parseFloat(fd.get('bw'));
     if (bw > 0) {
@@ -78,7 +80,9 @@
   document.addEventListener('submit', (e) => {
     const f = e.target;
     e.preventDefault();
-    if (f.id === 'setup-form' || f.id === 'profile-form') { applyProfile(new FormData(f)); toast(f.id === 'setup-form' ? 'You\'re set. Time to lift.' : 'Saved.'); render(); }
+    if (f.id === 'setup-form') { applyProfile(new FormData(f)); location.hash = '#/profile?setup=1'; }
+    else if (f.id === 'profile-form') { applyProfile(new FormData(f)); toast('Saved.'); render(); }
+    else if (f.id === 'lifts-form') { U.saveLifts(f); location.hash = '#/profile'; toast('Profile updated. Here\'s where you stand.'); }
     else if (f.id === 'bw-form') {
       const kg = C.fromDisp(parseFloat(new FormData(f).get('bw')));
       if (!(kg > 0)) return;
@@ -108,6 +112,7 @@
       U.persistDraft();
       return;
     }
+    if (el.dataset.pf) { const row = el.closest('.pl-row'); row.querySelector('[data-lp]').innerHTML = U.liftPreview(row.dataset.ex, row.querySelector('[data-pf=w]').value, row.querySelector('[data-pf=r]').value); return; }
     if (el.closest('#calc-form')) { st.calc[el.name] = el.value; $('#calc-result').innerHTML = U.calcResult(); }
   });
 
@@ -148,6 +153,13 @@
         break;
       }
       case 'quick-add': U.addEntry(b.dataset.id); rerenderLog(); break;
+      case 'mode': d.mode = b.dataset.mode; d.date = C.todayISO(); d.dateTouched = false; U.persistDraft(); rerenderLog(); U.paint($('#view')); break;
+      case 'set-date': d.date = b.dataset.d; d.dateTouched = d.date !== C.todayISO(); U.persistDraft(); rerenderLog(); break;
+      case 'copy-last': {
+        const en = d.entries[ei], last = U.lastSession(en.ex), ex = C.exById(en.ex);
+        if (last) { en.sets = last.en.sets.map((s0) => ({ w: ex.kind === 'bw' && !s0.w ? '0' : String(C.wNum(s0.w)), r: String(s0.r), done: false })); U.persistDraft(); rerenderLog(); }
+        break;
+      }
       case 'repeat-last': {
         const lw = [...S().workouts].sort((a, x) => x.date.localeCompare(a.date))[0];
         lw.entries.forEach((en) => { if (!d.entries.some((x) => x.ex === en.ex)) d.entries.push({ ex: en.ex, sets: en.sets.map(U.blankSet) }); });

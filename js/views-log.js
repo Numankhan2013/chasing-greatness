@@ -12,12 +12,13 @@
   const loadDraft = () => { try { const d = JSON.parse(localStorage.getItem(DRAFT_KEY)); if (d && Array.isArray(d.entries)) return d; } catch (e) { /* noop */ } return null; };
   U.persistDraft = () => { try { if (st.draft && !st.draft.id) localStorage.setItem(DRAFT_KEY, JSON.stringify(st.draft)); } catch (e) { /* noop */ } };
   U.clearDraft = () => { try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* noop */ } };
-  U.newDraft = () => ({ id: null, date: C.todayISO(), dateTouched: false, notes: '', showNotes: false, entries: [] });
+  U.newDraft = () => ({ id: null, mode: null, date: C.todayISO(), dateTouched: false, notes: '', showNotes: false, entries: [] });
   U.blankSet = blankSet;
-  const editDraft = (w) => ({ id: w.id, date: w.date, dateTouched: true, notes: w.notes || '', showNotes: !!w.notes,
+  const editDraft = (w) => ({ id: w.id, mode: 'past', date: w.date, dateTouched: true, notes: w.notes || '', showNotes: !!w.notes,
     entries: w.entries.map((en) => ({ ex: en.ex, sets: en.sets.map((s) => ({ w: s.w ? String(C.wNum(s.w)) : (C.exById(en.ex).kind === 'bw' ? '0' : ''), r: s.r ? String(s.r) : '', done: true })) })) });
   const sortedWorkouts = () => [...S().workouts].sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt - a.updatedAt);
 
+  U.lastSession = (exId) => lastSession(exId);
   function lastSession(exId) {
     const p = C.history(exId).filter((x) => !st.draft?.id || x.wid !== st.draft.id).at(-1);
     if (!p) return null;
@@ -43,7 +44,7 @@
       if (st.draft?.id) { st.draft = st.stash || loadDraft() || U.newDraft(); st.stash = null; }
       if (!st.draft) st.draft = loadDraft() || U.newDraft();
       if (!st.draft.dateTouched) st.draft.date = C.todayISO();
-      if (params.ex && C.allExercises().some((e) => e.id === params.ex) && !st.draft.entries.some((e) => e.ex === params.ex)) U.addEntry(params.ex);
+      if (params.ex && C.allExercises().some((e) => e.id === params.ex) && !st.draft.entries.some((e) => e.ex === params.ex)) { st.draft.mode ||= 'past'; U.addEntry(params.ex); }
       if (params.ex) history.replaceState(null, '', '#/log');
     }
     return U.renderLog();
@@ -52,31 +53,42 @@
   const setCount = () => st.draft.entries.reduce((n, en) => n + en.sets.filter((s) => parseInt(s.r, 10) > 0).length, 0);
   U.finishMeta = () => { const n = setCount(), e = st.draft.entries.length; return `${e} exercise${e > 1 ? 's' : ''} · ${n} set${n === 1 ? '' : 's'}`; };
 
+  const modeChooser = () => `<div class="page-head reveal"><h1>Log</h1></div>
+    <button class="mode-card reveal" data-act="mode" data-mode="past"><span class="mode-ic">${icon('clipboard')}</span><span class="grow"><b>I finished a workout</b><span class="muted">Quick entry afterwards: exercises, weights and reps. No timers.</span></span>${icon('chevRight', 'muted')}</button>
+    <button class="mode-card reveal" data-act="mode" data-mode="live"><span class="mode-ic live">${icon('play')}</span><span class="grow"><b>I'm working out now</b><span class="muted">Tick off sets as you go, with a rest timer.</span></span>${icon('chevRight', 'muted')}</button>
+    <a class="mode-link reveal" href="#/profile?edit=1">${icon('user')}<span>Not a workout? <b>Update your strength profile</b> to see where you stand.</span>${icon('chevRight')}</a>`;
+
   U.renderLog = () => {
     const d = st.draft;
+    if (!d.id && !d.mode && !d.entries.length) return modeChooser();
+    const live = d.mode === 'live';
     const recent = [];
     for (const w of sortedWorkouts()) for (const en of w.entries) if (!recent.includes(en.ex) && !d.entries.some((x) => x.ex === en.ex)) recent.push(en.ex);
     const lastW = sortedWorkouts()[0];
-    return `<div class="log-head reveal"><div><h1>${d.id ? 'Edit workout' : 'Workout'}</h1>
-        <div class="log-meta">
-          <label class="date-chip ${d.date !== C.todayISO() ? 'changed' : ''}">${icon('calendar')}<span>${relDate(d.date)}</span><input type="date" id="log-date" value="${d.date}" max="${C.todayISO()}" aria-label="Change workout date"></label>
-          <button class="date-chip" data-act="toggle-notes">${icon('note')}<span>${d.notes ? 'Note added' : 'Add note'}</span></button>
+    const today = C.todayISO(), yday = C.addDays(today, -1);
+    const dateCtl = live ? `<span class="live-dot">Live · today</span>` : `
+          <button class="date-chip ${d.date === today ? 'sel' : ''}" data-act="set-date" data-d="${today}">Today</button>
+          <button class="date-chip ${d.date === yday ? 'sel' : ''}" data-act="set-date" data-d="${yday}">Yesterday</button>
+          <label class="date-chip ${d.date !== today && d.date !== yday ? 'sel' : ''}">${icon('calendar')}<span>${d.date !== today && d.date !== yday ? relDate(d.date) : 'Other day'}</span><input type="date" id="log-date" value="${d.date}" max="${today}" aria-label="Pick workout date"></label>`;
+    return `<div class="log-head reveal"><div><h1>${d.id ? 'Edit workout' : live ? 'Live workout' : 'Log a workout'}</h1>
+        <div class="log-meta">${dateCtl}
+          <button class="date-chip" data-act="toggle-notes">${icon('note')}<span>${d.notes ? 'Note added' : 'Note'}</span></button>
         </div></div>
-        ${d.id ? '<button class="btn sm" data-act="cancel-edit">Cancel</button>' : d.entries.length ? '<button class="btn sm" data-act="discard">Discard</button>' : ''}</div>
+        ${d.id ? '<button class="btn sm" data-act="cancel-edit">Cancel</button>' : '<button class="btn sm" data-act="discard">Discard</button>'}</div>
       ${d.showNotes ? `<input class="notes" id="log-notes" value="${esc(d.notes)}" placeholder="How did it feel? Sleep, energy, anything…">` : ''}
-      ${d.entries.length ? '' : `<section class="empty-log card reveal"><div class="empty-ic">${icon('dumbbell')}</div><h2>What are we hitting today?</h2>
-        <p class="muted">Add an exercise and start logging sets. The date is already set to today.</p>
+      ${d.entries.length ? '' : `<section class="empty-log card reveal"><div class="empty-ic">${icon('dumbbell')}</div><h2>${live ? 'What are we hitting today?' : 'What did you train?'}</h2>
+        <p class="muted">${live ? 'Add your first exercise and tick off sets as you go.' : 'Add each exercise with the weight and reps you did.'}</p>
         <button class="btn primary lg" data-act="pick">${icon('plus')} Add exercise</button>
         ${recent.length ? `<div class="quick"><span class="muted xs">Recent</span><div class="quick-chips">${recent.slice(0, 8).map((id) => `<button class="pill" data-act="quick-add" data-id="${id}">${esc(C.exById(id).short)}</button>`).join('')}</div></div>` : ''}
         ${lastW ? `<button class="btn ghost sm" data-act="repeat-last">${icon('repeat')} Repeat last workout (${relDate(lastW.date).toLowerCase()})</button>` : ''}</section>`}
       <div id="entries">${d.entries.map(entryCard).join('')}</div>
       ${d.entries.length ? `<button class="btn ghost wide add-ex" data-act="pick">${icon('plus')} Add exercise</button>
-        <div class="finish-bar"><button class="btn primary lg wide" data-act="finish">${icon('check')} ${d.id ? 'Save changes' : 'Finish workout'}<span class="finish-meta">${U.finishMeta()}</span></button></div>` : ''}
+        <div class="finish-bar"><button class="btn primary lg wide" data-act="finish">${icon('check')} ${d.id ? 'Save changes' : live ? 'Finish workout' : 'Save workout'}<span class="finish-meta">${U.finishMeta()}</span></button></div>` : ''}
       ${d.id ? `<button class="btn danger wide" data-act="del-wo" data-id="${d.id}">${icon('trash')} Delete this workout</button>` : ''}`;
   };
 
   function entryCard(en, ei) {
-    const ex = C.exById(en.ex), last = lastSession(en.ex), lr = C.liftRank(en.ex), u = C.unit();
+    const ex = C.exById(en.ex), last = lastSession(en.ex), lr = C.liftRank(en.ex), u = C.unit(), live = st.draft.mode === 'live';
     const col = ex.kind === 'db' ? `One DB (${u})` : ex.kind === 'bw' ? `Extra ${u}` : `Weight (${u})`;
     const howto = ex.kind === 'db' ? `<div class="howto">${icon('dumbbell')}<span>Enter the weight of <b>one dumbbell</b>. Holding 25 ${u} in each hand? Enter <b>25</b>.</span></div>`
       : ex.kind === 'bw' ? `<div class="howto">${icon('info')}<span>Your bodyweight counts automatically. Enter <b>0</b>, or only the <b>extra</b> weight (belt or vest).</span></div>` : '';
@@ -84,8 +96,8 @@
       <div class="entry-head"><div class="entry-title">${ex.std ? emblem(lr ? lr.tier : -1, 34, lr?.div) : `<span class="ex-ic">${icon('dumbbell')}</span>`}<div><b>${esc(ex.name)}</b><span class="muted xs">${esc(C.catById(ex.cat).name)}${ex.std ? (lr ? ' · ' + esc(lr.label) : '') : ' · not ranked'}</span></div></div>
         <button class="icon-btn" data-act="rm-entry" data-e="${ei}" aria-label="Remove ${esc(ex.name)}" title="Remove exercise">${icon('trash')}</button></div>
       ${howto}
-      ${last ? `<div class="last">${icon('history')} Last time, ${relDate(last.date).toLowerCase()}: ${U.summarizeEntry(last.en).replace(/<b>.*?<\/b>/, '').replace(/<[^>]+>/g, '').trim()}${ex.kind === 'bw' ? '' : ' ' + u}</div>` : ''}
-      <div class="sets"><div class="set-row head"><span>Set</span><span>${col}</span><span>Reps</span><span>Done</span></div>
+      ${last ? `<div class="last">${icon('history')} Last time, ${relDate(last.date).toLowerCase()}: ${U.summarizeEntry(last.en).replace(/<b>.*?<\/b>/, '').replace(/<[^>]+>/g, '').trim()}${ex.kind === 'bw' ? '' : ' ' + u}${live ? '' : `<button class="copy-btn" data-act="copy-last" data-e="${ei}">${icon('copy')} Same again</button>`}</div>` : ''}
+      <div class="sets ${live ? 'live' : 'past'}"><div class="set-row head"><span>Set</span><span>${col}</span><span>Reps</span>${live ? '<span>Done</span>' : ''}</div>
         ${en.sets.map((s, si) => {
           const ls = last?.en.sets[si] || last?.en.sets.at(-1);
           const phW = ls ? (ex.kind === 'bw' && !ls.w ? '0' : String(C.wNum(ls.w))) : ex.kind === 'bw' ? '0' : '';
@@ -93,7 +105,7 @@
             <span class="set-n">${si + 1}</span>
             <input type="number" inputmode="decimal" step="any" data-f="w" value="${esc(s.w)}" placeholder="${phW}" aria-label="${col}, set ${si + 1}">
             <input type="number" inputmode="numeric" step="1" min="0" data-f="r" value="${esc(s.r)}" placeholder="${ls ? ls.r : ''}" aria-label="Reps, set ${si + 1}">
-            <button class="check" data-act="done-set" data-e="${ei}" data-s="${si}" aria-label="Mark set ${si + 1} done">${icon('check')}</button></div>`;
+            ${live ? `<button class="check" data-act="done-set" data-e="${ei}" data-s="${si}" aria-label="Mark set ${si + 1} done">${icon('check')}</button>` : ''}</div>`;
         }).join('')}</div>
       <div class="entry-foot"><div class="stepper"><button class="btn sm" data-act="rm-set" data-e="${ei}" aria-label="Remove last set" ${en.sets.length <= 1 ? 'disabled' : ''}>${icon('minus')}</button><span class="xs muted">Sets</span><button class="btn sm" data-act="add-set" data-e="${ei}" aria-label="Add a set">${icon('plus')}</button></div><div class="preview" data-preview="${ei}">${U.entryPreview(en)}</div></div>
       <div data-sanity="${ei}">${U.entrySanity(en, ei)}</div></section>`;
@@ -104,7 +116,7 @@
     let best = 0;
     for (const s of en.sets) { const w = parseFloat(s.w) || 0, r = parseInt(s.r, 10); if (r > 0 && (w > 0 || ex.kind === 'bw')) best = Math.max(best, C.setMetric(ex, { w: C.fromDisp(w), r }, bw)); }
     if (!best) return '';
-    const prev = C.bestOf(en.ex), isPR = prev && best > prev.best + 1e-6 && (!st.draft.id || prev.wid !== st.draft.id);
+    const prev = C.bestKnown(en.ex), isPR = prev && best > prev.best + 1e-6 && (!st.draft.id || prev.wid !== st.draft.id);
     const r = C.rankOf(en.ex, best);
     return `<span class="muted">${ex.kind === 'bw' ? 'Equiv.' : 'Est. max'}</span> <b class="mono">${C.fmtMetric(ex, best)}</b>${r ? chip(r.tier, r.label) : ''}${isPR ? `<span class="chip pr">${icon('trophy')} PR</span>` : ''}`;
   };
@@ -167,7 +179,7 @@
     if (!entries.length) { toast('Enter weight and reps for at least one set.'); return; }
     const wasEdit = !!d.id, date = d.dateTouched ? d.date : C.todayISO();
     const before = C.snapshot();
-    const beforeBest = Object.fromEntries(entries.map((en) => [en.ex, C.bestOf(en.ex)?.best || 0]));
+    const beforeBest = Object.fromEntries(entries.map((en) => [en.ex, C.bestKnown(en.ex)?.best || 0]));
     if (wasEdit) Object.assign(S().workouts.find((x) => x.id === d.id), { date, notes: d.notes.trim(), entries, updatedAt: Date.now() });
     const newId = wasEdit ? d.id : C.uid();
     if (!wasEdit) S().workouts.push({ id: newId, date, notes: d.notes.trim(), entries, updatedAt: Date.now() });
@@ -182,7 +194,7 @@
 
   function summarySheet(date, entries, before, beforeBest, wid) {
     const after = C.snapshot();
-    const prs = entries.filter((en) => beforeBest[en.ex] > 0 && (C.bestOf(en.ex)?.best || 0) > beforeBest[en.ex] + 1e-6).map((en) => ({ ex: C.exById(en.ex), v: C.bestOf(en.ex).best, d: C.bestOf(en.ex).best - beforeBest[en.ex] }));
+    const prs = entries.filter((en) => beforeBest[en.ex] > 0 && (C.bestKnown(en.ex)?.best || 0) > beforeBest[en.ex] + 1e-6).map((en) => ({ ex: C.exById(en.ex), v: C.bestKnown(en.ex).best, d: C.bestKnown(en.ex).best - beforeBest[en.ex] }));
     const ups = Object.entries(after.exRanks).filter(([id, r]) => !before.exRanks[id] || r.step > before.exRanks[id].step).map(([id, r]) => ({ ex: C.exById(id), r, was: before.exRanks[id] })).sort((a, b) => b.r.pct - a.r.pct);
     const oUp = after.overall && (!before.overall || after.overall.step > before.overall.step);
     const sets = entries.reduce((n, en) => n + en.sets.length, 0), bw = C.currentBW();

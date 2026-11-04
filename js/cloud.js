@@ -4,7 +4,7 @@
  * merges it with the cloud on sign-in / app focus and pushes changes after each save.
  *
  * Firestore layout (rules: only the signed-in owner can read or write):
- *   users/{uid}                 { profile, bodyweights, custom, deleted, metaUpdatedAt }
+ *   users/{uid}                 { profile, bodyweights, custom, lifts, deleted, metaUpdatedAt }
  *   users/{uid}/workouts/{id}   one workout, with updatedAt for last-write-wins
  */
 window.CG_CLOUD = (() => {
@@ -21,7 +21,7 @@ window.CG_CLOUD = (() => {
 
   const emit = () => listeners.forEach((fn) => { try { fn(cloud); } catch (e) { /* ignore */ } });
   const setStatus = (s, err = '') => { cloud.status = s; cloud.error = err; emit(); };
-  const metaOf = (s) => ({ profile: s.profile, bodyweights: s.bodyweights, custom: s.custom, deleted: s.deleted });
+  const metaOf = (s) => ({ profile: s.profile, bodyweights: s.bodyweights, custom: s.custom, lifts: s.lifts || {}, deleted: s.deleted });
   const metaJSON = (s) => JSON.stringify(metaOf(s));
 
   // Local edit time of the meta (profile, weigh-ins, custom exercises, tombstones).
@@ -73,7 +73,7 @@ window.CG_CLOUD = (() => {
     const useRemote = remoteMeta && (remoteMeta.metaUpdatedAt || 0) > localAt;
     const metaSrc = useRemote ? remoteMeta : local;
     const metaAt = useRemote ? remoteMeta.metaUpdatedAt : (localAt || Date.now());
-    const merged = C.normalize({ ...local, profile: metaSrc.profile, bodyweights: metaSrc.bodyweights, custom: metaSrc.custom, workouts, deleted });
+    const merged = C.normalize({ ...local, profile: metaSrc.profile, bodyweights: metaSrc.bodyweights, custom: metaSrc.custom, lifts: metaSrc.lifts || local.lifts || {}, workouts, deleted });
 
     const before = JSON.stringify(local);
     C.replaceState(merged, { silent: true });

@@ -16,7 +16,8 @@
         <label>Units <select name="unit"><option value="kg" ${p.unit === 'kg' ? 'selected' : ''}>Kilograms</option><option value="lb" ${p.unit === 'lb' ? 'selected' : ''}>Pounds</option></select></label>
         <label>Sex <select name="sex"><option value="male" ${p.sex === 'male' ? 'selected' : ''}>Male</option><option value="female" ${p.sex === 'female' ? 'selected' : ''}>Female</option></select></label>
         <label>Bodyweight <input name="bw" type="number" inputmode="decimal" step="0.1" min="20" required placeholder="e.g. 75"></label>
-        <div class="span2 actions"><button class="btn primary lg" type="submit">Start tracking ${icon('arrowRight')}</button><button class="btn ghost" type="button" data-act="demo">Try with demo data</button></div>
+        <label>How long have you been lifting? <select name="months"><option value="">Choose…</option>${U.EXPERIENCE.map(([v, l]) => `<option value="${v}" ${p.trainingMonths === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        <div class="span2 actions"><button class="btn primary lg" type="submit">Next: what can you lift? ${icon('arrowRight')}</button><button class="btn ghost" type="button" data-act="demo">Try with demo data</button></div>
       </form></section>`;
   };
 
@@ -82,7 +83,7 @@
       ${o ? `<p class="hero-sub">Stronger than <b><span data-count="${Math.round(o.pct)}">${Math.round(o.pct)}</span>%</b> of lifters at your bodyweight</p>
         <div class="hero-meter">${ladder(o.pct)}<div class="meter-meta"><span>${o.next ? `<b>${(o.next.from - o.pct).toFixed(1)}</b> pts to <b style="color:${tierInfo(o.next.tier).color}">${esc(o.next.label)}</b>` : 'Top of the mountain'}</span><span class="mono">SR <b data-count="${o.rating}">${o.rating}</b></span></div></div>
         <p class="muted small">${esc(t.exp)} · based on ${o.coverage} of ${CATEGORIES.length} muscle groups${o.coverage < 4 ? ', so train more groups to firm it up' : ''}</p>`
-      : `<p class="hero-sub">Log any of the 22 ranked exercises to get placed.</p><a class="btn primary" href="#/log">${icon('plus')} Log your first workout</a>`}</div></section>`;
+      : `<p class="hero-sub">Tell us what you can lift right now and see where you stand. Takes a minute, no workout needed.</p><div class="actions hero-actions"><a class="btn primary" href="#/profile?edit=1">${icon('sparkle')} Build my strength profile</a><a class="btn" href="#/log">${icon('plus')} Log a workout</a></div>`}</div></section>`;
 
     const stats = `<section class="stats reveal">
       <div class="stat goal">${ring(wk / goal, wk >= goal ? '#4ee6a0' : '#ff7a3d', 58, `${wk}/${goal}`)}<div><div class="stat-l">Weekly goal</div><div class="stat-s">${wk >= goal ? 'Smashed it' : `${goal - wk} to go`}</div></div></div>
@@ -148,8 +149,9 @@
         <label>Units <select name="unit"><option value="kg" ${p.unit === 'kg' ? 'selected' : ''}>Kilograms</option><option value="lb" ${p.unit === 'lb' ? 'selected' : ''}>Pounds</option></select></label>
         <label>Sex (for standards) <select name="sex"><option value="male" ${p.sex === 'male' ? 'selected' : ''}>Male</option><option value="female" ${p.sex === 'female' ? 'selected' : ''}>Female</option></select></label>
         <label>Bodyweight (${C.unit()}) <input name="bw" type="number" inputmode="decimal" step="0.1" min="20" value="${C.currentBW() ? C.wNum(C.currentBW()) : ''}"></label>
+        <label>How long have you been lifting? <select name="months"><option value="">Choose…</option>${U.EXPERIENCE.map(([v, l]) => `<option value="${v}" ${p.trainingMonths === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
         <label>Weekly goal <select name="goal">${[2, 3, 4, 5, 6].map((n) => `<option value="${n}" ${p.weeklyGoal === n ? 'selected' : ''}>${n} workouts / week</option>`).join('')}</select></label>
-        <label>Rest timer <select name="rest">${[60, 90, 120, 150, 180, 240].map((n) => `<option value="${n}" ${(p.rest || 120) === n ? 'selected' : ''}>${n < 120 ? n + ' sec' : n / 60 + ' min'}</option>`).join('')}</select></label>
+        <label>Rest timer (live workouts) <select name="rest">${[60, 90, 120, 150, 180, 240].map((n) => `<option value="${n}" ${(p.rest || 120) === n ? 'selected' : ''}>${n < 120 ? n + ' sec' : n / 60 + ' min'}</option>`).join('')}</select></label>
         <div class="span2 actions"><button class="btn primary" type="submit">Save profile</button></div></form></section>
       ${U.cloudCard()}
       <section class="card reveal"><h2>Your data</h2>

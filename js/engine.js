@@ -25,7 +25,8 @@ window.CG = (() => {
   /* ── state ── */
   const DEFAULT = {
     version: 2,
-    profile: { name: '', sex: 'male', unit: 'lb', bodyweight: null, weeklyGoal: 3 },
+    profile: { name: '', sex: 'male', unit: 'lb', bodyweight: null, weeklyGoal: 3, trainingMonths: null },
+    lifts: {},        // strength profile: {exId: {w (kg), r, date}} — "what I can lift now", NOT workouts
     workouts: [],     // {id, date, notes, updatedAt, entries:[{ex, sets:[{w (kg), r}]}]}
     bodyweights: [],  // {date, kg}
     custom: [],       // {id, name, cat, kind}
@@ -40,6 +41,7 @@ window.CG = (() => {
       bodyweights: Array.isArray(s.bodyweights) ? s.bodyweights : [],
       custom: (Array.isArray(s.custom) ? s.custom : []).map((c) => ({ cat: 'other', kind: 'load', ...c })),
       deleted: Array.isArray(s.deleted) ? s.deleted : [],
+      lifts: s.lifts && typeof s.lifts === 'object' && !Array.isArray(s.lifts) ? s.lifts : {},
     };
     for (const w of out.workouts) w.updatedAt ||= Date.parse(w.date) || Date.now();
     return out;
@@ -219,8 +221,24 @@ window.CG = (() => {
   const bestOf = (exId) => history(exId).reduce((a, b) => (!a || b.best > a.best ? b : a), null);
   const trainedExercises = () => allExercises().filter((e) => history(e.id).length);
 
+  /* Profile lift → same shape as a history point, so the UI can treat both alike. */
+  function profilePoint(exId, date = todayISO()) {
+    const l = api.state.lifts[exId];
+    if (!l || !(l.r > 0) || l.date > date) return null;
+    const ex = exById(exId);
+    if (ex.kind !== 'bw' && !(l.w > 0)) return null;
+    const best = setMetric(ex, l, date === todayISO() ? currentBW() : bwAt(date));
+    return best > 0 ? { date: l.date, best, top: { w: l.w, r: l.r }, profile: true } : null;
+  }
+  /* Best known performance: the higher of logged workouts and the strength profile. */
+  function bestKnown(exId) {
+    const h = bestOf(exId), p = profilePoint(exId);
+    if (!h) return p;
+    if (!p) return h;
+    return p.best > h.best ? p : h;
+  }
   function liftRank(exId) {
-    const b = bestOf(exId);
+    const b = bestKnown(exId);
     if (!b) return null;
     const r = rankOf(exId, b.best);
     return r ? { ...r, best: b } : null;
@@ -235,6 +253,8 @@ window.CG = (() => {
       if (!ex.std) continue;
       let best = 0;
       for (const p of history(ex.id)) if (p.date <= date && p.best > best) best = p.best;
+      const pp = profilePoint(ex.id, date);
+      if (pp && pp.best > best) best = pp.best;
       if (best > 0) exRanks[ex.id] = rankOf(ex.id, best, bw);
     }
     const cats = {};
@@ -324,7 +344,7 @@ window.CG = (() => {
     allExercises, exById, catById, isRanked,
     currentBW, bwAt, e1rm, eqReps, setMetric, fmtMetric,
     anchors, toPct, fromPct, rankFromPct, rankOf, stepLabel,
-    derived, history, bestOf, trainedExercises, liftRank, snapshot,
+    derived, history, bestOf, bestKnown, profilePoint, trainedExercises, liftRank, snapshot,
     weekStreak, sessionsThisWeek, prsSince, trend, volumeByWeek, setsByCategory, rankTimeline,
   });
   return api;
