@@ -146,7 +146,9 @@
     const ql = q.trim().toLowerCase(), inDraft = new Set(st.draft.entries.map((e) => e.ex));
     const recentIds = [];
     for (const w of sortedWorkouts()) for (const en of w.entries) if (!recentIds.includes(en.ex)) recentIds.push(en.ex);
-    const list = C.allExercises().filter((e) => (cat === 'all' || e.cat === cat) && (!ql || e.name.toLowerCase().includes(ql) || (e.short || '').toLowerCase().includes(ql)));
+    // Match name, short name or any alias ("hamstring curl" → Leg Curl, "stiff leg" → RDL).
+    const hit = (e) => [e.name, e.short || '', ...(e.aka || [])].some((t) => t.toLowerCase().includes(ql));
+    const list = C.allExercises().filter((e) => (cat === 'all' || e.cat === cat) && (!ql || hit(e)));
     const row = (e) => {
       const lr = C.liftRank(e.id);
       return `<button class="pick-row ${inDraft.has(e.id) ? 'added' : ''}" data-act="pick-ex" data-id="${e.id}">${e.std ? emblem(lr ? lr.tier : -1, 30, lr?.div) : `<span class="ex-ic sm">${icon('dumbbell')}</span>`}

@@ -37,11 +37,11 @@
 
   function methodology() {
     return `<section class="card reveal method"><h2>${icon('info')} How ranks work</h2>
-      <p>Every set gets an <b>estimated one-rep max</b> (Epley: weight × (1 + reps ÷ 30)). Reps above 10 count as 10, because high-rep sets measure endurance and inflate the estimate. Pull-ups, chin-ups and dips use bodyweight reps, and added weight converts into extra reps.</p>
+      <p>Every set gets an <b>estimated one-rep max</b>, calculated exactly the way the standards themselves were built: the Brzycki formula below 8 reps, a blend from 8 to 10, and Epley above 10 (capped at 20 reps). Using the same method on both sides keeps the comparison fair. Pull-ups, chin-ups and dips use bodyweight reps, and added weight converts into extra reps.</p>
       <p>That estimate is compared against <b>Strength Level's standards</b>, built from about 10.9 million real logged lifts (2015–2026), <b>at your exact bodyweight and sex</b>. You get a percentile, "stronger than X% of lifters", and that decides your tier:</p>
       <div class="tier-grid">${TIERS.map((t0, i) => { const t = { ...t0, color: tierInfo(i).color }; return `<div class="tg" style="--c:${t.color}">${emblem(i, 40, i < TIERS.length - 1 ? 1 : 0)}<div><b style="color:${t.color}">${t.name}</b><div class="xs muted">${i < TIERS.length - 1 ? `${Math.round(t.from)}–${Math.round(TIERS[i + 1].from)}th pct` : '97th+ pct'} · ${esc(t.exp)}</div></div></div>`; }).join('')}</div>
       <p>Each tier has three divisions (III → II → I). A <b>muscle group</b> ranks by your best exercise in it. <b>Overall</b> is the average of your groups (arms count half), so balanced lifters climb fastest.</p>
-      <p class="muted small">The comparison is against people who log lifts online, who are already more committed than the general population. "Average" here is genuinely good. Liftoff works the same way at its core: it scores each set's Epley 1RM on a 1–1000 scale, using bodyweight and sex curves fitted to its own users' 546M logged sets. But it doesn't publish those curves, and it counts reps up to 30, which inflates high-rep sets.</p></section>`;
+      <p class="muted small">The comparison is against people who log lifts online, who are already more committed than the general population. "Average" here is genuinely good. Liftoff works the same way at its core: it scores each set's Epley 1RM on a 1–1000 scale, using bodyweight and sex curves fitted to its own users' 546M logged sets. But it doesn't publish those curves, and it counts reps up to 30, which inflates high-rep sets. ${C.EXERCISES.filter((e) => e.std).length} exercises here are ranked against public standards.</p></section>`;
   }
 
   U.views.ranks = (params) => {

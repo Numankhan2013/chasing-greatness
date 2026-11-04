@@ -5,13 +5,14 @@ It's free and private, works offline, and lives on Firebase Hosting with optiona
 
 ## How ranks work
 
-- Every set gets an **estimated 1RM** (Epley). Reps above 10 count as 10, because high-rep sets inflate estimates.
+- Every set gets an **estimated 1RM** computed the way the standards were built: Brzycki below 8 reps, a blend
+  from 8–10, Epley above 10 (reps capped at 20), so the comparison is like-for-like.
   Pull-ups, chin-ups and dips use bodyweight reps, and added weight converts into extra reps.
 - That estimate is compared with **Strength Level's standards** (about 10.9M real logged lifts, 2015–2026)
   **at your bodyweight and sex**, which gives a percentile: "stronger than X% of lifters".
 - Percentile → tier: Rookie (0–20) · Bronze (20–33) · Silver (33–47) · Gold (47–60) · Diamond (60–80) ·
   Elite (80–90) · Legend (90–97) · Mythic (97+). Each tier has three divisions, III → II → I.
-- **22 ranked exercises** across 6 muscle groups. A group ranks by your best exercise in it. Overall is the
+- **42 ranked exercises** across 6 muscle groups (searchable by common aliases, e.g. "hamstring curl", "stiff leg deadlift"). A group ranks by your best exercise in it. Overall is the
   average of your groups (arms count half).
 
 ## Features

@@ -102,9 +102,19 @@ window.CG = (() => {
   }
 
   /* ── strength math ──
-   * Epley 1RM, but reps above 10 count as 10: high-rep sets measure endurance and wildly
-   * inflate estimated maxes (Epley at 15 reps says +50%). */
-  const e1rm = (w, r) => (!(w > 0) || !(r > 0) ? 0 : r === 1 ? w : w * (1 + Math.min(r, 10) / 30));
+   * Estimated 1RM computed exactly the way the Strength Level standards were built, so we compare
+   * like with like: Brzycki below 8 reps, a linear blend from 8 to 10 (9 reps = 50/50), Epley above 10.
+   * Reps above 20 count as 20: very long sets measure endurance more than strength. */
+  const brzycki = (w, r) => (w * 36) / (37 - r);
+  const epley = (w, r) => w * (1 + r / 30);
+  function e1rm(w, r) {
+    if (!(w > 0) || !(r > 0)) return 0;
+    if (r === 1) return w;
+    r = Math.min(r, 20);
+    if (r < 8) return brzycki(w, r);
+    if (r <= 10) { const t = (r - 8) / 2; return brzycki(w, r) * (1 - t) + epley(w, r) * t; }
+    return epley(w, r);
+  }
   // Bodyweight lifts: convert (bodyweight + added load) × reps into equivalent bodyweight reps.
   function eqReps(addKg, reps, bwKg) {
     if (!(reps > 0)) return 0;

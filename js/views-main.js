@@ -138,7 +138,7 @@
       <div class="landing-emblems">${[1, 3, 4, 7].map((t) => emblem(t, 54, 1)).join('')}</div>
       <h1 class="display">Chase<br><span class="grad">greatness.</span></h1>
       <p class="lead muted">See exactly where your strength stands, ranked against <b>10.9 million real lifts</b> at your bodyweight. Then watch yourself climb.</p>
-      <ul class="landing-points"><li>${icon('trophy')} Honest ranks for 22 exercises</li><li>${icon('chart')} Progress, projections and insights</li><li>${icon('cloud')} Synced across all your devices</li></ul>
+      <ul class="landing-points"><li>${icon('trophy')} Honest ranks for ${C.EXERCISES.filter((e) => e.std).length} exercises</li><li>${icon('chart')} Progress, projections and insights</li><li>${icon('cloud')} Synced across all your devices</li></ul>
       <button class="btn google lg wide" data-act="cloud-signin">${GOOGLE_G} Continue with Google</button>
       ${cl && cl.status === 'error' ? `<p class="small" style="color:var(--bad)">${esc(cl.error)}</p>` : ''}
       <p class="muted xs center">Only you can see your data. <button class="text-btn" data-act="guest">Use without an account</button></p>
