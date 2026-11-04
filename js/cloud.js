@@ -19,7 +19,6 @@ window.CG_CLOUD = (() => {
   const getOwner = () => { try { return localStorage.getItem(OWNER_KEY); } catch (e) { return null; } };
   const setOwner = (uid) => { try { if (uid) localStorage.setItem(OWNER_KEY, uid); else localStorage.removeItem(OWNER_KEY); } catch (e) { /* ignore */ } };
   const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-  const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   const META_KEY = 'chasing-greatness.meta';
   const PULL_EVERY = 5 * 60 * 1000;
   const listeners = new Set();
@@ -178,8 +177,12 @@ window.CG_CLOUD = (() => {
       try { sessionStorage.setItem(REDIRECT_KEY, '1'); } catch (e) { /* ignore */ }
       await auth.signInWithRedirect(provider);
     };
-    // Phones and home-screen apps: popups are unreliable there, and same-origin redirect is solid.
-    if (onFirebaseHost && (mobile || standalone)) return redirect();
+    /* iPhone/iPad: popups are unreliable, so use the same-origin redirect there.
+     * Android: always use the popup. In an installed (home-screen) app, Chrome opens Google's page in a
+     * separate Custom Tab with its own sessionStorage, so a redirect comes back to /__/auth/handler with
+     * no saved state and fails with "missing initial state". The popup keeps a link to the app window. */
+    const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (onFirebaseHost && ios) return redirect();
     try {
       await auth.signInWithPopup(provider);
     } catch (e) {
