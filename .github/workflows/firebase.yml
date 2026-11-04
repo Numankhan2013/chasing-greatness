@@ -29,4 +29,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npx -y firebase-tools@13 deploy --only hosting,firestore:rules --project chasing-greatness --non-interactive
+      - run: npx -y firebase-tools@13 deploy --only hosting,firestore:rules --project chasing-greatness --non-interactive --debug 2>&1 | grep -v "^\[debug\].*Bearer" | tail -60; exit ${PIPESTATUS[0]}
