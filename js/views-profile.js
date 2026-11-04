@@ -6,7 +6,7 @@
   const { esc, icon, emblem, chip, bar, ladder, tierInfo, pctTxt, fmtDate } = U;
   const S = () => C.state;
   // One common lift per muscle group, so a new profile covers all six groups from day one.
-  const CORE = ['bench', 'ohp', 'pulldown', 'squat', 'deadlift', 'curl'];
+  const CORE = ['bench', 'ohp', 'pullup', 'squat', 'deadlift', 'curl'];
   U.EXPERIENCE = [[3, 'Under 6 months'], [9, '6–12 months'], [18, '1–2 years'], [42, '2–5 years'], [72, '5+ years']];
   const expectedTier = (m) => (m < 6 ? 0 : m < 12 ? 1 : m < 24 ? 2 : m < 60 ? 3 : 4);
   const expLabel = (m) => (U.EXPERIENCE.find(([v]) => v === m) || [0, ''])[1];
