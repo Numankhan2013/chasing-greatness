@@ -397,3 +397,35 @@ body[data-gate] .unit-slot { display: none; }
   body:not([data-gate]):not([data-onboard]) .brand span { display: none; }
   .mobile-actions a { width: 36px; }
 }
+
+/* ── Add-to-profile sheet ── */
+.lift-sheet { display: flex; flex-direction: column; gap: .8rem; }
+.ls-head { display: flex; align-items: center; gap: .8rem; }
+.ls-inputs { display: grid; grid-template-columns: 1fr auto 1fr; gap: .6rem; align-items: end; }
+.ls-inputs input { text-align: center; font: 600 1.4rem var(--mono); padding: .7rem .4rem; }
+.ls-x { padding-bottom: .8rem; color: var(--muted); }
+.ls-preview { min-height: 28px; display: flex; align-items: center; }
+.ls-preview .chip { font-size: .875rem; padding: .25rem .75rem; }
+.ls-alt { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; font-size: .9375rem; }
+.ls-alt a.text-btn { margin-left: auto; }
+.danger-text { color: var(--bad) !important; }
+.add-pill { display: inline-flex; align-items: center; gap: .2rem; padding: .3rem .65rem; border-radius: 99px; background: rgba(255, 159, 10, .15); color: var(--accent); font-size: .8125rem; font-weight: 600; flex: none; }
+.add-pill .ic { width: 14px; height: 14px; }
+.ex-row.dim { opacity: 1; }
+.ex-row.dim b { color: var(--text); }
+.sheet-actions { justify-content: center; }
+/* ── Fine-tune card ── */
+.fine-tune h2 .ic { color: var(--accent); }
+.ft-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .5rem; margin-bottom: .7rem; }
+.ft-chip { display: flex; align-items: center; gap: .55rem; padding: .65rem .75rem; border: 0; border-radius: 12px; background: var(--card-2); text-align: left; cursor: pointer; }
+.ft-chip > .ic { color: var(--accent); width: 18px; height: 18px; }
+.ft-chip span { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.ft-chip:active { transform: scale(.98); }
+.add-group { border-top: .5px solid var(--line); padding-top: .4rem; margin-top: .2rem; }
+.add-label { display: flex; align-items: center; gap: .35rem; font-size: .8125rem; color: var(--muted); padding: .35rem .3rem .1rem; }
+.add-label .ic { width: 15px; height: 15px; color: var(--accent); }
+.ex-row.add-row { padding: .45rem .3rem; border-top: 0; }
+.ex-row.add-row b { font-weight: 500; }
+button.grp-row { width: 100%; border: 0; border-top: .5px solid var(--line); background: none; text-align: left; cursor: pointer; color: inherit; font: inherit; }
+.grp-row.dim { opacity: 1; }
+.grp-row.dim b { color: var(--text); }

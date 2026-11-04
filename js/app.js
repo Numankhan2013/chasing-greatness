@@ -111,6 +111,8 @@
       if (ex) ex.kg = kg; else S().bodyweights.push({ date: today, kg });
       S().profile.bodyweight = C.currentBW();
       C.save(); toast('Weigh-in logged.'); render();
+    } else if (f.id === 'lift-sheet-form') {
+      if (U.saveLiftSheet(f)) { U.closeSheet(); setTimeout(render, 280); }
     } else if (f.id === 'create-ex') {
       const fd = new FormData(f), name = String(fd.get('name')).trim();
       if (!name) return;
@@ -133,6 +135,7 @@
       U.persistDraft();
       return;
     }
+    if (el.closest('#lift-sheet-form')) { const f = el.closest('#lift-sheet-form'); $('#ls-preview').innerHTML = U.liftPreview(f.dataset.ex, f.elements.w.value, f.elements.r.value) || '<span class="muted small">Enter weight and reps to see your rank</span>'; return; }
     if (el.dataset.pf) { const row = el.closest('.pl-row'); row.querySelector('[data-lp]').innerHTML = U.liftPreview(row.dataset.ex, row.querySelector('[data-pf=w]').value, row.querySelector('[data-pf=r]').value); return; }
     if (el.closest('#calc-form')) { st.calc[el.name] = el.value; $('#calc-result').innerHTML = U.calcResult(); }
   });
@@ -175,6 +178,14 @@
     switch (act) {
       case 'close-sheet': U.closeSheet(); break;
       case 'ex-sheet': U.exSheet(b.dataset.id); break;
+      case 'lift-sheet': { const id = b.dataset.id; if (!$('#sheet').hidden) { U.closeSheet(); setTimeout(() => U.liftSheet(id), 280); } else U.liftSheet(id); break; }
+      case 'lift-picker': U.liftPicker(); break;
+      case 'remove-lift': {
+        const id = b.dataset.id;
+        if (!confirm(`Remove ${C.exById(id).name} from your strength profile? Logged workouts aren't affected.`)) break;
+        delete S().lifts[id]; C.save(); U.closeSheet(); setTimeout(render, 280); toast('Removed from your profile.');
+        break;
+      }
       case 'pick': U.pickerSheet(); break;
       case 'pick-cat': $$('#pick-cats .pill').forEach((p) => p.classList.toggle('on', p === b)); $('#pick-list').dataset.cat = b.dataset.id; $('#pick-list').innerHTML = U.pickList($('#pick-q').value, b.dataset.id); break;
       case 'pick-ex': {

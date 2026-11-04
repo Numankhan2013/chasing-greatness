@@ -17,7 +17,7 @@
     }));
     return `<section class="card reveal"><div class="sec-head"><div><h2>Bodyweight</h2><span class="muted small">Ranks use your latest weigh-in</span></div><b class="mono">${C.currentBW() ? C.fmtW(C.currentBW()) : ''}</b></div>
       ${bws.length > 1 ? '<div id="bw-chart"></div>' : ''}
-      <form id="bw-form" class="inline-form"><input type="number" name="bw" inputmode="decimal" step="0.1" min="20" placeholder="Today's weight (${C.unit()})" required><button class="btn primary sm">${icon('scale')} Log weigh-in</button></form></section>`;
+      <form id="bw-form" class="inline-form"><input type="number" name="bw" inputmode="decimal" step="0.1" min="20" placeholder="Weight (${C.unit()})" aria-label="Today's bodyweight in ${C.unit()}" required><button class="btn primary sm">${icon('scale')} Log weigh-in</button></form></section>`;
   }
 
   U.views.progress = (params) => {
@@ -37,9 +37,10 @@
       refs.forEach((x) => { lo = Math.min(lo, x.v); hi = Math.max(hi, x.v); });
       const pad = (hi - lo) * 0.12 || hi * 0.1 || 1;
       mountChart('#ex-chart', {
-        chart: { type: 'area', height: 280 },
+        chart: { type: h.length < 2 ? 'scatter' : 'area', height: 280 },
         series: [{ name: ex.kind === 'bw' ? 'Equivalent reps' : 'Estimated 1RM', data: h.map((p) => ({ x: C.parseDate(p.date).getTime(), y: disp(p.best) })) }],
-        xaxis: dtAxis, yaxis: { min: Math.max(0, lo - pad), max: hi + pad, tickAmount: 4, labels: { formatter: (v) => Math.round(v) } },
+        // One session: centre the dot in a two-week window instead of a squashed axis with a spike.
+        xaxis: { ...dtAxis, labels: { datetimeUTC: false, format: 'MMM d' }, ...(h.length < 2 ? { min: C.parseDate(h[0].date).getTime() - 7 * C.DAY, max: C.parseDate(h[0].date).getTime() + 7 * C.DAY } : {}) }, yaxis: { min: Math.max(0, lo - pad), max: hi + pad, tickAmount: 4, labels: { formatter: (v) => Math.round(v) } },
         stroke: { curve: 'smooth', width: 3 }, colors: [color],
         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0, stops: [0, 100] } },
         markers: { size: 3, strokeWidth: 0, hover: { size: 6 }, discrete: h.map((p, i) => (p.pr ? { seriesIndex: 0, dataPointIndex: i, fillColor: '#ffd25e', strokeColor: '#fff', size: 5 } : null)).filter(Boolean) },
@@ -99,11 +100,12 @@
     const catList = Object.values(snap.cats).sort((a, b) => b.rank.pct - a.rank.pct);
     if (catList.length >= 3) add('good', 'medal', `Strongest: ${catList[0].cat.name}`, `${esc(catList[0].top.ex.name)} puts your ${catList[0].cat.name.toLowerCase()} at <b style="color:${tierInfo(catList[0].rank.tier).color}">${esc(catList[0].rank.label)}</b>. Your weakest group is ${catList.at(-1).cat.name.toLowerCase()} (${esc(catList.at(-1).rank.label)}), and raising it is the fastest way up overall.`);
     const missing = CATEGORIES.filter((c) => !snap.cats[c.id]);
-    if (missing.length && o) add('info', 'layers', `${missing.length} muscle group${missing.length > 1 ? 's' : ''} unranked`, `Your overall rank doesn't include ${missing.map((c) => c.name.toLowerCase()).join(', ')} yet. Log one ranked exercise for each to get the full picture.`);
+    if (missing.length && o) add('info', 'layers', `${missing.length} muscle group${missing.length > 1 ? 's' : ''} unranked`, `Your overall rank doesn't include ${missing.map((c) => c.name.toLowerCase()).join(', ')} yet. <a class="link" href="#/profile">Add a lift to your profile</a> or log one in a workout to get the full picture.`);
 
     const proj = [];
     for (const [id, r] of Object.entries(snap.exRanks)) {
       const ex = C.exById(id), h = C.history(id), tr = C.trend(id);
+      if (!h.length) continue; // ranked from the strength profile only: no workout history to analyse
       const lastPR = [...h].reverse().find((p) => p.pr), sincePR = lastPR ? C.daysBetween(lastPR.date, today) : 0, idle = C.daysBetween(h.at(-1).date, today);
       if (idle >= 21 && h.length >= 3) add('warn', 'warn', `${esc(ex.short)} is getting neglected`, `Last trained ${idle} days ago. Ranks are earned and kept, so work it back in.`);
       else if (sincePR >= 28 && h.length >= 5) add('warn', 'target', `${esc(ex.short)} has stalled`, `No PR in ${Math.round(sincePR / 7)} weeks. Try a deload week, a new rep range (5×5 → 4×8), or check sleep and food.`);

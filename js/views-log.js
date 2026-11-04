@@ -56,7 +56,7 @@
   const modeChooser = () => `<div class="page-head reveal"><h1>Log</h1></div>
     <button class="mode-card reveal" data-act="mode" data-mode="past"><span class="mode-ic">${icon('clipboard')}</span><span class="grow"><b>I finished a workout</b><span class="muted">Quick entry afterwards: exercises, weights and reps. No timers.</span></span>${icon('chevRight', 'muted')}</button>
     <button class="mode-card reveal" data-act="mode" data-mode="live"><span class="mode-ic live">${icon('play')}</span><span class="grow"><b>I'm working out now</b><span class="muted">Tick off sets as you go, with a rest timer.</span></span>${icon('chevRight', 'muted')}</button>
-    <a class="mode-link reveal" href="#/profile?edit=1">${icon('user')}<span>Not a workout? <b>Update your strength profile</b> to see where you stand.</span>${icon('chevRight')}</a>`;
+    <a class="mode-link reveal" href="#/profile">${icon('user')}<span>Not a workout? <b>Add lifts to your strength profile</b> to sharpen your rank.</span>${icon('chevRight')}</a>`;
 
   U.renderLog = () => {
     const d = st.draft;

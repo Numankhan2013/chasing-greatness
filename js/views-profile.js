@@ -63,6 +63,16 @@
     C.save();
   };
 
+  function fineTune(snap) {
+    // Suggest exercises for empty groups first, then the weakest group, skipping ones already known.
+    const order = [...CATEGORIES.filter((c) => !snap.cats[c.id]), ...Object.values(snap.cats).sort((a, b) => a.rank.pct - b.rank.pct).map((d) => d.cat)];
+    const sugg = [];
+    for (const c of order) for (const e of C.EXERCISES) if (e.std && e.cat === c.id && !snap.exRanks[e.id] && sugg.length < 6 && !sugg.includes(e)) { sugg.push(e); break; }
+    return `<section class="card reveal fine-tune"><div class="sec-head"><div><h2>${icon('sparkle')} Fine-tune your rank</h2><span class="muted small">Add more lifts you can do. Each one sharpens your muscle-group and overall rank.</span></div></div>
+      <div class="ft-chips">${sugg.map((e) => `<button class="ft-chip" data-act="lift-sheet" data-id="${e.id}">${icon('plus')}<span><b>${esc(e.short || e.name)}</b><span class="muted xs">${esc(C.catById(e.cat).name)}</span></span></button>`).join('')}</div>
+      <button class="btn wide" data-act="lift-picker">Choose any exercise ${icon('chevRight')}</button></section>`;
+  }
+
   /* ── analysis ── */
   function analysis() {
     const p = S().profile, snap = C.snapshot(), o = snap.overall;
@@ -90,11 +100,11 @@
     const near = Object.entries(snap.exRanks).filter(([, r]) => r.next).map(([id, r]) => ({ ex: C.exById(id), r })).sort((a, b) => a.r.need / a.r.value - b.r.need / b.r.value)[0];
     if (near) add('good', 'zap', 'Closest rank-up', `${esc(near.ex.name)}: ${near.ex.kind === 'bw' ? `${C.round(near.r.need, 1)} more reps` : `+${C.fmtW(near.r.need)}`} on your max gets you <b style="color:${tierInfo(near.r.next.tier).color}">${esc(near.r.next.label)}</b>.`);
     const missing = CATEGORIES.filter((c) => !snap.cats[c.id]);
-    if (missing.length) add('info', 'layers', 'Complete your picture', `No data yet for ${missing.map((c) => c.name.toLowerCase()).join(', ')}. <a class="link" href="#/log">Log a workout</a> with one of those and your analysis fills in automatically.`);
+    if (missing.length) add('info', 'layers', 'Complete your picture', `No data yet for ${missing.map((c) => c.name.toLowerCase()).join(', ')}. <button class="text-btn" data-act="lift-picker">Add a lift</button> and your analysis fills in instantly.`);
 
     const groups = CATEGORIES.map((c) => {
       const d = snap.cats[c.id];
-      if (!d) return `<a class="grp-row dim" href="#/log">${emblem(-1, 34)}<div class="grow"><b>${c.name}</b><span class="muted xs">Log an exercise to rank this</span></div>${icon('plus', 'muted')}</a>`;
+      if (!d) { const pick = CORE.find((id) => C.exById(id).cat === c.id) || C.EXERCISES.find((e) => e.std && e.cat === c.id).id; return `<button class="grp-row dim" data-act="lift-sheet" data-id="${pick}">${emblem(-1, 34)}<div class="grow"><b>${c.name}</b><span class="muted xs">Add a lift to rank this group</span></div><span class="add-pill">${icon('plus')} Add</span></button>`; }
       const tt = tierInfo(d.rank.tier);
       return `<div class="grp-row">${emblem(d.rank.tier, 34, d.rank.div)}<div class="grow"><div class="ex-row-top"><b>${c.name}</b><span class="mono small">${pctTxt(d.rank.pct)}%</span></div>${bar(d.rank.pct / 100, tt.color)}<span class="xs"><span style="color:${tt.color}">${esc(d.rank.label)}</span> <span class="muted">· ${esc(d.top.ex.short)}</span></span></div></div>`;
     }).join('');
@@ -109,9 +119,53 @@
         <div class="kicker">${esc(p.name || 'You')} · ${C.fmtW(bw)} · ${p.sex === 'female' ? 'Female' : 'Male'}${p.trainingMonths != null ? ' · ' + esc(expLabel(p.trainingMonths)) : ''}</div>
         <div class="rank-name sm">${esc(o.label)}</div><p>Stronger than <b>${pctTxt(o.pct)}%</b> of lifters at your bodyweight.</p>${ladder(o.pct)}</div></section>
       <section class="card reveal"><div class="sec-head"><h2>By muscle group</h2></div>${groups}</section>
+      ${fineTune(snap)}
       <h2 class="sec-label reveal">Analysis</h2><div class="insights">${cards.join('')}</div>
-      <section class="card reveal"><div class="sec-head"><h2>Your best lifts</h2><span class="muted xs">Profile or logged, whichever is higher</span></div>${lifts}</section>`;
+      <section class="card reveal"><div class="sec-head"><div><h2>Your best lifts</h2><span class="muted xs">Profile or logged, whichever is higher</span></div></div>${lifts}</section>`;
   }
+
+  /* ── Add / update one lift in the profile (from Ranks, exercise sheets, or the fine-tune card) ── */
+  U.liftSheet = (exId) => {
+    const ex = C.exById(exId), l = S().lifts[exId], u = C.unit();
+    const w = l ? (ex.kind === 'bw' ? (l.w ? String(C.wNum(l.w)) : '0') : String(C.wNum(l.w))) : (ex.kind === 'bw' ? '0' : '');
+    const label = ex.kind === 'db' ? `One dumbbell (${u})` : ex.kind === 'bw' ? `Extra weight (${u})` : `Weight (${u})`;
+    const hint = ex.kind === 'db' ? `Holding 25 ${u} in each hand? Enter 25.` : ex.kind === 'bw' ? 'Your bodyweight counts automatically. Enter 0 for bodyweight only.' : 'A recent set you\'re confident in, at any reps.';
+    const lr = C.liftRank(exId);
+    U.openSheet(`<form id="lift-sheet-form" data-ex="${exId}" class="lift-sheet">
+      <div class="ls-head">${emblem(lr ? lr.tier : -1, 52, lr?.div)}<div><div class="kicker">${esc(C.catById(ex.cat).name)}</div><h2 class="sheet-title">${esc(ex.name)}</h2></div></div>
+      <p class="muted small">${l ? 'Update' : 'Add'} what you can do. It goes into your <b>strength profile</b>, not your workout history, and sharpens your ${esc(C.catById(ex.cat).name.toLowerCase())} and overall rank.</p>
+      <div class="ls-inputs">
+        <label>${label}<input type="number" inputmode="decimal" step="any" name="w" value="${esc(w)}" placeholder="${ex.kind === 'bw' ? '0' : u}"></label>
+        <span class="ls-x">×</span>
+        <label>Reps<input type="number" inputmode="numeric" min="1" step="1" name="r" value="${l ? l.r : ''}" placeholder="reps"></label>
+      </div>
+      <p class="muted xs">${hint}</p>
+      <div class="ls-preview" id="ls-preview">${U.liftPreview(exId, w, l ? l.r : '') || '<span class="muted small">Enter weight and reps to see your rank</span>'}</div>
+      <button class="btn primary lg wide" type="submit">${icon('check')} ${l ? 'Update profile' : 'Add to my profile'}</button>
+      <div class="ls-alt">${l ? `<button type="button" class="text-btn danger-text" data-act="remove-lift" data-id="${exId}">Remove from profile</button>` : ''}<a class="text-btn" href="#/log?ex=${exId}">Log as a workout instead</a></div>
+    </form>`);
+  };
+  U.saveLiftSheet = (form) => {
+    const id = form.dataset.ex, ex = C.exById(id), fd = new FormData(form);
+    const w = parseFloat(fd.get('w')) || 0, r = parseInt(fd.get('r'), 10) || 0;
+    if (!(r > 0) || (ex.kind !== 'bw' && !(w > 0))) { U.toast('Enter a weight and reps.'); return false; }
+    const before = C.snapshot();
+    S().lifts[id] = { w: C.fromDisp(w), r, date: C.todayISO() };
+    C.save();
+    const after = C.snapshot(), lr = C.liftRank(id);
+    const up = after.overall && before.overall && after.overall.step > before.overall.step;
+    U.toast(up ? `${icon('up')} Overall rank up: ${esc(after.overall.label)}!` : `${esc(ex.short || ex.name)}: ${esc(lr ? lr.label : 'saved')}. Profile updated.`);
+    if (up) U.celebrateFX(tierInfo(after.overall.tier).color);
+    return true;
+  };
+  /* Pick any ranked exercise to add to the profile. */
+  U.liftPicker = () => {
+    const groups = CATEGORIES.map((c) => {
+      const list = C.EXERCISES.filter((e) => e.std && e.cat === c.id);
+      return `<div class="pick-group">${c.name}</div>${list.map((e) => { const lr = C.liftRank(e.id); return `<button class="pick-row" data-act="lift-sheet" data-id="${e.id}">${emblem(lr ? lr.tier : -1, 30, lr?.div)}<span class="pick-name"><b>${esc(e.name)}</b><span class="muted xs">${lr ? esc(lr.label) : 'Not ranked yet'}</span></span>${icon(S().lifts[e.id] ? 'edit' : 'plus', 'muted')}</button>`; }).join('')}`;
+    }).join('');
+    U.openSheet(`<div class="picker"><h2 class="sheet-title">Add a lift to your profile</h2><p class="muted small">Every lift you add sharpens your rank.</p><div class="pick-list">${groups}</div></div>`, 'tall');
+  };
 
   U.views.profile = (params) => {
     if (!C.currentBW()) return U.setupView();
