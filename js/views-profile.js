@@ -111,7 +111,7 @@
     const lifts = Object.entries(snap.exRanks).sort((a, b) => b[1].pct - a[1].pct).map(([id, r]) => {
       const ex = C.exById(id), b = C.bestKnown(id);
       const set = `${ex.kind === 'bw' ? (b.top.w ? '+' + C.wNum(b.top.w) : 'BW') : C.wNum(b.top.w)}×${b.top.r}${ex.kind === 'db' ? ' each' : ''}`;
-      return `<button class="pl-sum" data-act="ex-sheet" data-id="${id}">${emblem(r.tier, 30, r.div)}<span class="grow"><b>${esc(ex.name)}</b><span class="muted xs">${set} · ${b.profile ? 'from profile' : 'logged ' + fmtDate(b.date)}</span></span>${chip(r.tier, r.label)}</button>`;
+      return `<a class="pl-sum" href="#/lift?ex=${id}">${emblem(r.tier, 30, r.div)}<span class="grow"><b>${esc(ex.name)}</b><span class="muted xs">${set} · ${b.profile ? 'from profile' : 'logged ' + fmtDate(b.date)}</span></span>${chip(r.tier, r.label)}</a>`;
     }).join('');
     const bw = C.currentBW();
     return `<div class="page-head reveal"><h1>Profile</h1><a class="btn sm" href="#/profile?edit=1">${icon('edit')} Edit lifts</a></div>

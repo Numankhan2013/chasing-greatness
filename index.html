@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Chasing Greatness</title>
   <meta name="description" content="Log lifts, earn ranks against 10.9M real lifts, see your progress. Free, offline, with optional Google sign-in to sync.">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Greatness">
@@ -14,19 +15,22 @@
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Apple devices use San Francisco (system font); Inter is the fallback everywhere else. -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <!-- Apply the saved theme before first paint (no flash). Default follows the system. -->
+  <script>try { const t = localStorage.getItem('chasing-greatness.theme'); document.documentElement.dataset.theme = t || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'); } catch (e) { document.documentElement.dataset.theme = 'dark'; }</script>
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/pages.css">
 </head>
 <body>
   <header class="topbar">
     <a href="#/home" class="brand" aria-label="Chasing Greatness home"><img src="icons/icon.svg" alt="" width="30" height="30"><span>Chasing <b>Greatness</b></span></a>
-    <nav id="nav" class="nav" aria-label="Main"></nav>
     <div id="unit-slot" class="unit-slot"></div>
     <div id="mobile-actions" class="mobile-actions"></div>
   </header>
 
+  <!-- Outside the header on purpose: the header's backdrop-filter would trap position:fixed children. -->
+  <nav id="nav" class="nav" aria-label="Main"></nav>
   <main id="view" class="view"></main>
 
   <div id="rest" class="rest" hidden>
@@ -53,6 +57,7 @@
   <script defer src="js/views-log.js"></script>
   <script defer src="js/views-data.js"></script>
   <script defer src="js/views-profile.js"></script>
+  <script defer src="js/views-lift.js"></script>
   <!-- Firebase (Google sign-in + Firestore cloud sync), compat build so it works without a bundler. -->
   <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>

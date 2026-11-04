@@ -7,12 +7,13 @@
 
   function exRow(e, r) {
     const t = tierInfo(r.tier);
-    return `<button class="ex-row" data-act="ex-sheet" data-id="${e.id}" style="--c:${t.color}">${emblem(r.tier, 40, r.div)}
+    return `<a class="ex-row" href="#/lift?ex=${e.id}" style="--c:${t.color}">${emblem(r.tier, 40, r.div)}
       <div class="ex-row-main"><div class="ex-row-top"><b>${esc(e.name)}</b><span class="mono small">${C.fmtMetric(e, r.value)}</span></div>${bar(r.frac, t.color)}
-      <div class="ex-row-top small"><span style="color:${t.color}">${esc(r.label)}</span><span class="muted">${r.next ? `+${C.fmtMetric(e, r.need)} → ${esc(r.next.label)}` : 'Maxed'}</span></div></div></button>`;
+      <div class="ex-row-top small"><span style="color:${t.color}">${esc(r.label)}</span><span class="muted">${r.next ? `+${C.fmtMetric(e, r.need)} → ${esc(r.next.label)}` : 'Maxed'}</span></div></div></a>`;
   }
 
-  U.tierTable = (ex, res) => `<div class="tier-table">${TIERS.map((t, i) => {
+  U.tierTable = (ex, res) => `<div class="tier-table">${TIERS.map((t0, i) => {
+    const t = { ...t0, color: tierInfo(i).color };
     const v = res.tierValues[i], reached = res.tier >= i;
     const val = i === 0 ? 'Start' : ex.kind === 'bw' ? `${Math.ceil(v)} reps` : C.fmtW(C.plateUp(v));
     return `<div class="tt-row ${res.tier === i ? 'cur' : ''} ${reached ? 'done' : ''}" style="--c:${t.color}">${emblem(i, 26)}<span class="tt-name">${t.name}</span><span class="muted xs">Top ${100 - t.from}%</span><span class="mono tt-val">${val}</span>${reached ? icon('check', 'tt-check') : '<span class="tt-check"></span>'}</div>`;
@@ -38,7 +39,7 @@
     return `<section class="card reveal method"><h2>${icon('info')} How ranks work</h2>
       <p>Every set gets an <b>estimated one-rep max</b> (Epley: weight × (1 + reps ÷ 30)). Reps above 10 count as 10, because high-rep sets measure endurance and inflate the estimate. Pull-ups, chin-ups and dips use bodyweight reps, and added weight converts into extra reps.</p>
       <p>That estimate is compared against <b>Strength Level's standards</b>, built from about 10.9 million real logged lifts (2015–2026), <b>at your exact bodyweight and sex</b>. You get a percentile, "stronger than X% of lifters", and that decides your tier:</p>
-      <div class="tier-grid">${TIERS.map((t, i) => `<div class="tg" style="--c:${t.color}">${emblem(i, 40, i < 6 ? 1 : 0)}<div><b style="color:${t.color}">${t.name}</b><div class="xs muted">${i < 6 ? `${t.from}–${TIERS[i + 1].from}th pct` : '97th+ pct'} · ${esc(t.exp)}</div></div></div>`).join('')}</div>
+      <div class="tier-grid">${TIERS.map((t0, i) => { const t = { ...t0, color: tierInfo(i).color }; return `<div class="tg" style="--c:${t.color}">${emblem(i, 40, i < 6 ? 1 : 0)}<div><b style="color:${t.color}">${t.name}</b><div class="xs muted">${i < 6 ? `${t.from}–${TIERS[i + 1].from}th pct` : '97th+ pct'} · ${esc(t.exp)}</div></div></div>`; }).join('')}</div>
       <p>Each tier has three divisions (III → II → I). A <b>muscle group</b> ranks by your best exercise in it. <b>Overall</b> is the average of your groups (arms count half), so balanced lifters climb fastest.</p>
       <p class="muted small">The comparison is against people who log lifts online, who are already more committed than the general population. "Average" here is genuinely good. Liftoff works the same way at its core: it scores each set's Epley 1RM on a 1–1000 scale, using bodyweight and sex curves fitted to its own users' 546M logged sets. But it doesn't publish those curves, and it counts reps up to 30, which inflates high-rep sets.</p></section>`;
   }
@@ -58,9 +59,9 @@
     }).join('');
     if (!U.st.calc) U.st.calc = { ex: 'bench', w: C.unit() === 'lb' ? '225' : '100', r: '1', bw: String(C.wNum(C.currentBW())), sex: S().profile.sex };
     const calc = U.st.calc;
-    return `<div class="page-head reveal"><h1>Ranks</h1><span class="muted small">vs 10.9M real lifts at your bodyweight</span></div>
+    return `<div class="page-head reveal"><h1>Lifts</h1><span class="muted small">Ranked vs 10.9M real lifts at your bodyweight</span></div>
       ${o ? `<section class="card reveal overall-strip" style="--c:${tierInfo(o.tier).color}">${emblem(o.tier, 70, o.div)}<div class="grow"><div class="kicker">Overall</div><div class="rank-name sm" style="color:${tierInfo(o.tier).color}">${esc(o.label)}</div>${ladder(o.pct)}<div class="meter-meta"><span>Stronger than <b>${pctTxt(o.pct)}%</b></span><span class="mono">SR ${o.rating}</span></div></div></section>` : ''}
-      <div class="chips-scroll reveal">${[{ id: 'all', name: 'All' }, ...CATEGORIES].map((c) => `<a href="#/ranks${c.id === 'all' ? '' : '?cat=' + c.id}" class="pill ${filter === c.id ? 'on' : ''}">${c.name}</a>`).join('')}</div>
+      <div class="chips-scroll reveal">${[{ id: 'all', name: 'All' }, ...CATEGORIES].map((c) => `<a href="#/lifts${c.id === 'all' ? '' : '?cat=' + c.id}" class="pill ${filter === c.id ? 'on' : ''}">${c.name}</a>`).join('')}</div>
       ${sections}
       <section class="card reveal" id="calc"><div class="sec-head"><div><h2>${icon('calc')} What-if calculator</h2><span class="muted small">"If I lift 225, what am I?"</span></div></div>
         <form id="calc-form" class="form-grid calc-form">
@@ -72,6 +73,8 @@
         </form><div id="calc-result">${U.calcResult()}</div></section>
       ${methodology()}`;
   };
+
+  U.views.lifts = (params) => U.views.ranks(params);
 
   U.exSheet = (id) => {
     const ex = C.exById(id), r = C.liftRank(id);

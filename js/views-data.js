@@ -5,7 +5,7 @@
   const { esc, icon, emblem, chip, bar, tierInfo, pctTxt, fmtDate, afterRender, mountChart } = U;
   const S = () => C.state;
   const dtAxis = { type: 'datetime', labels: { datetimeUTC: false }, axisBorder: { show: false }, axisTicks: { show: false } };
-  const tierLabel = (t, offsetY = 0) => ({ text: t.name.toUpperCase(), position: 'left', textAnchor: 'start', offsetX: 6, offsetY, borderWidth: 0, style: { background: 'transparent', color: t.color, fontSize: '10px', fontWeight: 700 } });
+  const tierLabel = (t0, offsetY = 0) => { const t = { ...t0, color: U.tierInfo(C.TIERS.indexOf(t0)).color }; return { text: t.name.toUpperCase(), position: 'left', textAnchor: 'start', offsetX: 6, offsetY, borderWidth: 0, style: { background: 'transparent', color: t.color, fontSize: '10px', fontWeight: 700 } }; };
 
   function bodyweightCard() {
     const bws = [...S().bodyweights].sort((a, b) => a.date.localeCompare(b.date));
@@ -20,13 +20,14 @@
       <form id="bw-form" class="inline-form"><input type="number" name="bw" inputmode="decimal" step="0.1" min="20" placeholder="Weight (${C.unit()})" aria-label="Today's bodyweight in ${C.unit()}" required><button class="btn primary sm">${icon('scale')} Log weigh-in</button></form></section>`;
   }
 
-  U.views.progress = (params) => {
-    if (!C.currentBW()) return U.setupView();
-    const trained = C.trainedExercises();
-    if (!trained.length) return `<div class="page-head"><h1>Progress</h1></div><section class="card empty-log"><div class="empty-ic">${icon('chart')}</div><p class="muted">Charts appear once you've logged a lift.</p><a class="btn primary" href="#/log">${icon('plus')} Log a workout</a></section>${bodyweightCard()}`;
-    const sel = params.ex && C.history(params.ex).length ? params.ex : (trained.find((e) => e.std) || trained[0]).id;
-    const ex = C.exById(sel), h = C.history(sel), best = C.bestOf(sel), r = C.rankOf(sel, best.best);
-    const color = r ? tierInfo(r.tier).color : '#ff7a3d', tr = C.trend(sel), gain = best.best - h[0].best;
+  U.bodyweightCard = bodyweightCard;
+
+  /* Per-lift progress: chart with tier lines, key stats, rep records, PR timeline. Needs logged history. */
+  U.progressBlock = (sel) => {
+    const ex = C.exById(sel), h = C.history(sel);
+    if (!h.length) return '';
+    const best = C.bestOf(sel), r = C.rankOf(sel, best.best);
+    const color = r ? tierInfo(r.tier).color : '#ff9f0a', tr = C.trend(sel), gain = best.best - h[0].best;
     const disp = (v) => (ex.kind === 'bw' ? C.round(v, 1) : C.wNum(v));
     const reps = C.derived().repPRs[sel] || {};
     afterRender(() => {
@@ -44,9 +45,24 @@
         stroke: { curve: 'smooth', width: 3 }, colors: [color],
         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0, stops: [0, 100] } },
         markers: { size: 3, strokeWidth: 0, hover: { size: 6 }, discrete: h.map((p, i) => (p.pr ? { seriesIndex: 0, dataPointIndex: i, fillColor: '#ffd25e', strokeColor: '#fff', size: 5 } : null)).filter(Boolean) },
-        annotations: { yaxis: refs.map(({ v, t }) => ({ y: v, borderColor: t.color, strokeDashArray: 5, opacity: 0.7, label: tierLabel(t) })) },
+        annotations: { yaxis: refs.map(({ v, t }) => ({ y: v, borderColor: U.tierInfo(C.TIERS.indexOf(t)).color, strokeDashArray: 5, opacity: 0.7, label: tierLabel(t) })) },
         tooltip: { x: { format: 'MMM d, yyyy' }, y: { formatter: (v) => (ex.kind === 'bw' ? `${v} reps` : `${v} ${C.unit()}`) } },
       });
+    });
+    const topSet = (p) => `${ex.kind === 'bw' ? (p.top.w ? '+' + C.wNum(p.top.w) : 'BW') : C.wNum(p.top.w)}×${p.top.r}`;
+    return `<section class="card reveal"><div class="sec-head"><div><h2>Progress</h2><span class="muted small">${ex.kind === 'bw' ? 'Equivalent bodyweight reps' : 'Estimated 1-rep max'} per workout${r ? ' · dashed lines = tiers' : ''}</span></div></div>
+        <div id="ex-chart" class="chart-box"></div>
+        <div class="mini-stats"><div><span class="muted xs">Best</span><b class="mono">${C.fmtMetric(ex, best.best)}</b></div><div><span class="muted xs">Since start</span><b class="mono ${gain >= 0 ? 'pos' : 'neg'}">${gain >= 0 ? '+' : '−'}${C.fmtMetric(ex, Math.abs(gain))}</b></div><div><span class="muted xs">Trend</span><b class="mono">${tr ? `${tr.perMonth >= 0 ? '+' : '−'}${C.fmtMetric(ex, Math.abs(tr.perMonth))}/mo` : '—'}</b></div><div><span class="muted xs">Sessions</span><b class="mono">${h.length}</b></div></div></section>
+      <section class="two-col">
+        ${ex.kind !== 'bw' && Object.keys(reps).length ? `<div class="card reveal"><h2>Rep records</h2><p class="muted small">Heaviest weight for each rep count.</p><div class="rep-grid">${[1, 2, 3, 5, 8, 10, 12].map((n) => `<div class="rep-cell ${reps[n] ? '' : 'dim'}"><span class="xs muted">${n} rep${n > 1 ? 's' : ''}</span><b class="mono">${reps[n] ? C.wNum(reps[n].w) : '—'}</b>${reps[n] ? `<span class="xs muted">${fmtDate(reps[n].date)}</span>` : ''}</div>`).join('')}</div></div>` : ''}
+        <div class="card reveal"><h2>PR timeline</h2>${h.filter((p) => p.pr).slice(-6).reverse().map((p) => `<div class="pr-row"><span>${icon('trophy', 'gold')} ${fmtDate(p.date, true)}</span><span class="muted mono">${topSet(p)}</span><b class="mono">${C.fmtMetric(ex, p.best)}</b></div>`).join('')}</div></section>
+`;
+  };
+
+  /* Weekly training volume across all exercises (lives on Insights). */
+  U.volumeCard = () => {
+    if (!S().workouts.length) return '';
+    afterRender(() => {
       const vol = C.volumeByWeek(12);
       mountChart('#vol-chart', {
         chart: { type: 'bar', height: 200 }, series: [{ name: 'Volume', data: vol.map((v) => Math.round(C.toDisp(v.v))) }],
@@ -57,18 +73,11 @@
         tooltip: { y: { formatter: (v) => `${v.toLocaleString()} ${C.unit()}` } },
       });
     });
-    const topSet = (p) => `${ex.kind === 'bw' ? (p.top.w ? '+' + C.wNum(p.top.w) : 'BW') : C.wNum(p.top.w)}×${p.top.r}`;
-    return `<div class="page-head reveal"><h1>Progress</h1></div>
-      <div class="chips-scroll reveal">${trained.map((e) => `<a href="#/progress?ex=${e.id}" class="pill ${e.id === sel ? 'on' : ''}">${esc(e.short || e.name)}</a>`).join('')}</div>
-      <section class="card reveal"><div class="sec-head"><div class="sec-title">${r ? emblem(r.tier, 40, r.div) : ''}<div><h2>${esc(ex.name)}</h2><span class="muted small">${ex.kind === 'bw' ? 'Equivalent bodyweight reps' : 'Estimated 1-rep max'} per session${r ? ' · dashed lines = tiers' : ''}</span></div></div>${r ? chip(r.tier, r.label) : ''}</div>
-        <div id="ex-chart" class="chart-box"></div>
-        <div class="mini-stats"><div><span class="muted xs">Best</span><b class="mono">${C.fmtMetric(ex, best.best)}</b></div><div><span class="muted xs">Since start</span><b class="mono ${gain >= 0 ? 'pos' : 'neg'}">${gain >= 0 ? '+' : '−'}${C.fmtMetric(ex, Math.abs(gain))}</b></div><div><span class="muted xs">Trend</span><b class="mono">${tr ? `${tr.perMonth >= 0 ? '+' : '−'}${C.fmtMetric(ex, Math.abs(tr.perMonth))}/mo` : '—'}</b></div><div><span class="muted xs">Sessions</span><b class="mono">${h.length}</b></div></div></section>
-      <section class="two-col">
-        ${ex.kind !== 'bw' && Object.keys(reps).length ? `<div class="card reveal"><h2>Rep records</h2><p class="muted small">Heaviest weight for each rep count.</p><div class="rep-grid">${[1, 2, 3, 5, 8, 10, 12].map((n) => `<div class="rep-cell ${reps[n] ? '' : 'dim'}"><span class="xs muted">${n} rep${n > 1 ? 's' : ''}</span><b class="mono">${reps[n] ? C.wNum(reps[n].w) : '—'}</b>${reps[n] ? `<span class="xs muted">${fmtDate(reps[n].date)}</span>` : ''}</div>`).join('')}</div></div>` : ''}
-        <div class="card reveal"><h2>PR timeline</h2>${h.filter((p) => p.pr).slice(-6).reverse().map((p) => `<div class="pr-row"><span>${icon('trophy', 'gold')} ${fmtDate(p.date, true)}</span><span class="muted mono">${topSet(p)}</span><b class="mono">${C.fmtMetric(ex, p.best)}</b></div>`).join('')}</div></section>
-      <section class="card reveal"><div class="sec-head"><div><h2>Weekly volume</h2><span class="muted small">All exercises · weight × reps</span></div></div><div id="vol-chart"></div></section>
-      ${bodyweightCard()}`;
+    return `<section class="card reveal"><div class="sec-head"><div><h2>Weekly volume</h2><span class="muted small">All exercises · weight × reps</span></div></div><div id="vol-chart"></div></section>`;
   };
+
+  // Old Progress route now lives inside each lift's page.
+  U.views.progress = (params) => (params.ex ? U.views.lift(params) : U.views.lifts(params));
 
   /* ── Insights ── */
   U.views.insights = () => {
@@ -137,7 +146,7 @@
         xaxis: dtAxis, yaxis: { min: lo, max: hi, tickAmount: 4, labels: { formatter: (v) => `${Math.round(v)}%` } },
         stroke: { curve: 'smooth', width: 3 }, colors: [tierInfo(o.tier).color],
         fill: { type: 'gradient', gradient: { opacityFrom: 0.35, opacityTo: 0 } }, markers: { size: 0, hover: { size: 5 } },
-        annotations: { yaxis: TIERS.map((t, i) => ({ y: t.from, y2: TIERS[i + 1]?.from ?? 100, fillColor: t.color, opacity: 0.06, borderColor: 'transparent', label: tierLabel(t, 14) })).filter((a) => a.y2 > lo && a.y < hi) },
+        annotations: { yaxis: TIERS.map((t, i) => ({ y: t.from, y2: TIERS[i + 1]?.from ?? 100, fillColor: U.tierInfo(i).color, opacity: 0.06, borderColor: 'transparent', label: tierLabel(t, 14) })).filter((a) => a.y2 > lo && a.y < hi) },
         tooltip: { x: { format: 'MMM d, yyyy' }, y: { formatter: (v, { dataPointIndex }) => `${tl[dataPointIndex].label} · ${v}%` } },
       });
     });
@@ -155,6 +164,7 @@
         ${o ? `<div class="card reveal"><div class="sec-head"><h2>Strength profile</h2>${chip(o.tier, o.label)}</div><div id="radar2" class="radar"></div></div>` : ''}
         <div class="card reveal"><div class="sec-head"><div><h2>This week's sets</h2><span class="muted small">Last 7 days · band = 10–20 hard sets, the research-backed range for growth</span></div></div>
           <div class="sb">${setBars}</div><p class="muted small">${under.length ? `Under target: ${under.map((c) => c.name.toLowerCase()).join(', ')}.` : 'Every trained group is in the zone. Textbook.'}</p></div></section>
-      <div class="insights">${cards.join('')}</div>`;
+      <div class="insights">${cards.join('')}</div>
+      ${U.volumeCard()}`;
   };
 })();

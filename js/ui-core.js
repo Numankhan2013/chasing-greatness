@@ -19,7 +19,11 @@ window.UI = (() => {
     return fmtDate(iso, C.parseDate(iso).getFullYear() !== new Date().getFullYear());
   };
   const pctTxt = (p) => (p >= 99.5 ? '99.5' : p < 1 ? '<1' : String(Math.round(p)));
-  const tierInfo = (i) => (i == null || i < 0 ? { name: 'Unranked', color: '#6b7385', c2: '#3a404d', blurb: 'Log a ranked lift to get placed.', exp: '' } : TIERS[i]);
+  /* Theme-aware tier colours: `color` is for text/bars (darker ink on light backgrounds),
+   * `metal` + `c2` are the badge's metallic fills and never change. */
+  const light = () => document.documentElement.dataset.theme === 'light';
+  const UNRANKED = { name: 'Unranked', color: '#71717a', ink: '#71717a', c2: '#3f3f46', blurb: 'Log a ranked lift to get placed.', exp: '' };
+  const tierInfo = (i) => { const t = i == null || i < 0 ? UNRANKED : TIERS[i]; return { ...t, metal: t.color, color: light() ? t.ink : t.color }; };
   const unitLabel = (ex) => (ex.kind === 'db' ? `${C.unit()} / DB` : ex.kind === 'bw' ? `+${C.unit()}` : C.unit());
 
   /* deferred mounts + charts */
@@ -34,12 +38,13 @@ window.UI = (() => {
     if (typeof el === 'string') el = $(el);
     if (!el) return;
     if (!window.ApexCharts) { el.innerHTML = '<div class="empty-chart">Charts load when you\'re online</div>'; return; }
+    const L = light();
     const base = {
-      chart: { background: 'transparent', foreColor: '#8e8e93', fontFamily: '-apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif', toolbar: { show: false }, zoom: { enabled: false }, parentHeightOffset: 0, animations: { enabled: !reduceMotion, speed: 700 } },
-      theme: { mode: 'dark' },
-      grid: { borderColor: 'rgba(84,84,88,.35)', strokeDashArray: 4, padding: { left: 6, right: 10 } },
+      chart: { background: 'transparent', foreColor: L ? '#71717a' : '#a1a1aa', fontFamily: 'Geist, -apple-system, system-ui, sans-serif', toolbar: { show: false }, zoom: { enabled: false }, parentHeightOffset: 0, animations: { enabled: !reduceMotion, speed: 700 } },
+      theme: { mode: L ? 'light' : 'dark' },
+      grid: { borderColor: L ? '#e4e4e7' : '#27272a', strokeDashArray: 4, padding: { left: 6, right: 10 } },
       dataLabels: { enabled: false }, legend: { show: false },
-      tooltip: { theme: 'dark' },
+      tooltip: { theme: L ? 'light' : 'dark' },
     };
     const c = new ApexCharts(el, merge(base, opts));
     c.render();
@@ -55,7 +60,7 @@ window.UI = (() => {
     return d + 'Z';
   }
   function emblem(tier, size = 64, div = 0) {
-    const t = tierInfo(tier), id = 'em' + ++seq, ranked = tier != null && tier >= 0;
+    const tt = tierInfo(tier), t = { ...tt, color: tt.metal }, id = 'em' + ++seq, ranked = tier != null && tier >= 0;
     let back = '', front = '';
     if (tier >= 4) for (const [x, y, ang, rx] of [[4, 36, -28, 19], [0, 50, -8, 17], [5, 64, 14, 14]]) {
       back += `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="5.2" transform="rotate(${ang} ${x} ${y})" fill="url(#${id}w)"/><ellipse cx="${100 - x}" cy="${y}" rx="${rx}" ry="5.2" transform="rotate(${-ang} ${100 - x} ${y})" fill="url(#${id}w)"/>`;
@@ -84,16 +89,18 @@ window.UI = (() => {
   }
   const chip = (tier, label) => `<span class="chip" style="--c:${tierInfo(tier).color}">${esc(label || tierInfo(tier).name)}</span>`;
   const bar = (frac, color) => `<div class="bar"><span style="width:${(C.clamp(frac, 0, 1) * 100).toFixed(1)}%;--c:${color}"></span></div>`;
-  const ladder = (pct) => `<div class="ladder">${TIERS.map((t, i) => { const to = TIERS[i + 1]?.from ?? 100; return `<span style="--c:${t.color};flex:${to - t.from}" class="${pct >= t.from ? 'on' : ''}" title="${t.name}"></span>`; }).join('')}<i style="left:${C.clamp(pct, 0, 100)}%"></i></div>`;
+  const ladder = (pct, metal = false) => `<div class="ladder">${TIERS.map((t, i) => { const to = TIERS[i + 1]?.from ?? 100; return `<span style="--c:${metal ? t.color : tierInfo(i).color};flex:${to - t.from}" class="${pct >= t.from ? 'on' : ''}" title="${t.name}"></span>`; }).join('')}<i style="left:${C.clamp(pct, 0, 100)}%"></i></div>`;
   function ring(frac, color, size, label) {
     const r = 26, c = 2 * Math.PI * r;
-    return `<svg class="ring" width="${size}" height="${size}" viewBox="0 0 64 64"><circle cx="32" cy="32" r="${r}" stroke="rgba(255,255,255,.08)" stroke-width="7" fill="none"/><circle cx="32" cy="32" r="${r}" stroke="${color}" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - C.clamp(frac, 0, 1))}" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" class="ring-t">${label}</text></svg>`;
+    return `<svg class="ring" width="${size}" height="${size}" viewBox="0 0 64 64"><circle cx="32" cy="32" r="${r}" style="stroke:var(--card-2)" stroke-width="7" fill="none"/><circle cx="32" cy="32" r="${r}" style="stroke:${color}" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - C.clamp(frac, 0, 1))}" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" class="ring-t">${label}</text></svg>`;
   }
 
   /* toast, sheet, rest timer, confetti */
   let toastTimer;
   function toast(msg) { const t = $('#toast'); t.innerHTML = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3000); }
-  function openSheet(html, cls = '') {
+  let sheetCloseTimer = null;
+  function legacyOpenSheet(html, cls = '') {
+    clearTimeout(sheetCloseTimer);
     const el = $('#sheet');
     el.innerHTML = `<div class="sheet-backdrop" data-act="close-sheet"></div><div class="sheet-panel ${cls}" role="dialog" aria-modal="true"><div class="sheet-top"><div class="sheet-grip"></div><button class="sheet-close" data-act="close-sheet" aria-label="Close">${icon('x')}</button></div>${html}</div>`;
     el.hidden = false; document.body.classList.add('sheet-open');
@@ -128,14 +135,53 @@ window.UI = (() => {
     grip.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') move(e.clientY, e); });
     grip.addEventListener('pointerup', (e) => { if (e.pointerType === 'mouse') end(); });
   }
-  function closeSheet() {
+  function legacyCloseSheet() {
     const el = $('#sheet');
     if (el.hidden) return;
     const panel = el.querySelector('.sheet-panel');
     if (panel) { panel.style.transition = 'transform .26s cubic-bezier(.3,.7,.4,1)'; panel.style.transform = 'translate(-50%, 105%)'; }
     el.classList.remove('show'); document.body.classList.remove('sheet-open');
-    setTimeout(() => { el.hidden = true; el.innerHTML = ''; }, 270);
+    sheetCloseTimer = setTimeout(() => { el.hidden = true; el.innerHTML = ''; }, 270);
   }
+
+  /* Drawer (bottom sheet) = the hand-made sheet above; dialog + action list in the same style. */
+  const openSheet = (html, cls = '') => legacyOpenSheet(html, cls);
+  const closeSheet = () => legacyCloseSheet();
+  const sheetOpen = () => !$('#sheet').hidden;
+
+  /* Action list in a drawer. buttons: [{ text, act, sub?, icon?, role }] → resolves with act or null. */
+  function actionSheet(header, buttons) {
+    return new Promise((resolve) => {
+      const opts = buttons.filter((b) => b.role !== 'cancel');
+      legacyOpenSheet(`<div class="action-list">${header ? `<h2 class="sheet-title">${esc(header)}</h2>` : ''}
+        ${opts.map((b) => `<button class="action-item" data-as="${b.act}">${b.icon ? `<span class="action-ic">${icon(b.icon)}</span>` : ''}<span class="grow"><b>${esc(b.text)}</b>${b.sub ? `<span class="muted small">${esc(b.sub)}</span>` : ''}</span>${icon('chevRight', 'muted')}</button>`).join('')}</div>`);
+      const el = $('#sheet');
+      const done = (v) => { el.removeEventListener('click', h, true); obs.disconnect(); resolve(v); };
+      const h = (e) => { const t = e.target.closest('[data-as]'); if (!t) return; e.stopPropagation(); legacyCloseSheet(); done(t.dataset.as); };
+      el.addEventListener('click', h, true);
+      const obs = new MutationObserver(() => { if (el.hidden) done(null); });
+      obs.observe(el, { attributes: true, attributeFilter: ['hidden'] });
+    });
+  }
+
+  /* Centered alert dialog (shadcn AlertDialog) instead of window.confirm. Resolves true on confirm. */
+  function confirmBox(message, { header = 'Are you sure?', ok = 'Continue', destructive = false } = {}) {
+    return new Promise((resolve) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'dialog';
+      wrap.innerHTML = `<div class="dialog-backdrop"></div><div class="dialog-panel" role="alertdialog" aria-modal="true" aria-labelledby="dlg-t" aria-describedby="dlg-d">
+        <h2 id="dlg-t">${esc(header)}</h2><p id="dlg-d" class="muted">${esc(message)}</p>
+        <div class="dialog-actions"><button class="btn" data-r="0">Cancel</button><button class="btn ${destructive ? 'destructive' : 'primary'}" data-r="1">${esc(ok)}</button></div></div>`;
+      document.body.appendChild(wrap);
+      requestAnimationFrame(() => wrap.classList.add('show'));
+      const close = (v) => { document.removeEventListener('keydown', key); wrap.classList.remove('show'); setTimeout(() => wrap.remove(), 160); resolve(v); };
+      const key = (e) => { if (e.key === 'Escape') close(false); };
+      document.addEventListener('keydown', key);
+      wrap.addEventListener('click', (e) => { const b = e.target.closest('[data-r]'); if (b) close(b.dataset.r === '1'); else if (e.target.classList.contains('dialog-backdrop')) close(false); });
+      wrap.querySelector('[data-r="1"]').focus();
+    });
+  }
+
   const timer = { end: 0, dur: 0, iv: null };
   function startRest(sec) { timer.dur = sec; timer.end = Date.now() + sec * 1000; clearInterval(timer.iv); timer.iv = setInterval(tickRest, 250); $('#rest').hidden = false; tickRest(); }
   function stopRest() { clearInterval(timer.iv); $('#rest').hidden = true; }
@@ -161,5 +207,5 @@ window.UI = (() => {
     $$('.hero-emblem .emblem, .sheet-emblem .emblem', root).forEach((el) => gsap.from(el, { scale: 0.85, opacity: 0, duration: 0.6, ease: 'power3.out' }));
   }
 
-  return { C, MONTHS, reduceMotion, $, $$, esc, icon, fmtDate, relDate, pctTxt, tierInfo, unitLabel, afterRender, flushMounts, destroyCharts, mountChart, emblem, chip, bar, ladder, ring, toast, openSheet, closeSheet, timer, startRest, stopRest, tickRest, celebrateFX, paint, views: {}, st: { draft: null, stash: null, calc: null } };
+  return { C, MONTHS, light, reduceMotion, $, $$, esc, icon, fmtDate, relDate, pctTxt, tierInfo, unitLabel, afterRender, flushMounts, destroyCharts, mountChart, emblem, chip, bar, ladder, ring, toast, openSheet, closeSheet, sheetOpen, actionSheet, confirm: confirmBox, timer, startRest, stopRest, tickRest, celebrateFX, paint, views: {}, st: { draft: null, stash: null, calc: null } };
 })();

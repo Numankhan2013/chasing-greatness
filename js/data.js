@@ -7,13 +7,13 @@
 window.CG_DATA = (() => {
   // `from` = percentile floor. Experience notes follow Strength Level's level descriptions.
   const TIERS = [
-    { id: 'rookie',    name: 'Rookie',    from: 0,  color: '#9aa3b5', c2: '#5d6577', blurb: 'Learning the movements. The fastest gains of your life are right ahead.', exp: 'First months of training' },
-    { id: 'contender', name: 'Contender', from: 20, color: '#e0915a', c2: '#8a4a22', blurb: 'A real foundation. Stronger than 1 in 5 people who lift.', exp: 'Typical after ~6–12 months' },
-    { id: 'warrior',   name: 'Warrior',   from: 40, color: '#d6dde8', c2: '#7b8698', blurb: 'Around or above the average gym-goer. That takes consistency.', exp: 'Typical after ~1–2 years' },
-    { id: 'champion',  name: 'Champion',  from: 60, color: '#ffd25e', c2: '#a86f0c', blurb: 'Stronger than most people who lift. People notice.', exp: 'Typical after ~2–5 years' },
-    { id: 'elite',     name: 'Elite',     from: 80, color: '#4ee6d6', c2: '#0c7d78', blurb: 'Top 20% of lifters. Years of dedicated, smart training.', exp: 'Typical after 5+ years' },
-    { id: 'legend',    name: 'Legend',    from: 90, color: '#b49bff', c2: '#5a3fc4', blurb: 'Top 10%. This is competitive-level strength.', exp: 'Competitive lifters' },
-    { id: 'mythic',    name: 'Mythic',    from: 97, color: '#ff5a7a', c2: '#a1123a', blurb: 'Top 3% of lifters. Genuinely rare air.', exp: 'Top competitors' },
+    { id: 'rookie', ink: '#64748b',    name: 'Rookie',    from: 0,  color: '#9aa3b5', c2: '#5d6577', blurb: 'Learning the movements. The fastest gains of your life are right ahead.', exp: 'First months of training' },
+    { id: 'contender', ink: '#c2410c', name: 'Contender', from: 20, color: '#e0915a', c2: '#8a4a22', blurb: 'A real foundation. Stronger than 1 in 5 people who lift.', exp: 'Typical after ~6–12 months' },
+    { id: 'warrior', ink: '#475569',   name: 'Warrior',   from: 40, color: '#d6dde8', c2: '#7b8698', blurb: 'Around or above the average gym-goer. That takes consistency.', exp: 'Typical after ~1–2 years' },
+    { id: 'champion', ink: '#b45309',  name: 'Champion',  from: 60, color: '#ffd25e', c2: '#a86f0c', blurb: 'Stronger than most people who lift. People notice.', exp: 'Typical after ~2–5 years' },
+    { id: 'elite', ink: '#0f766e',     name: 'Elite',     from: 80, color: '#4ee6d6', c2: '#0c7d78', blurb: 'Top 20% of lifters. Years of dedicated, smart training.', exp: 'Typical after 5+ years' },
+    { id: 'legend', ink: '#6d28d9',    name: 'Legend',    from: 90, color: '#b49bff', c2: '#5a3fc4', blurb: 'Top 10%. This is competitive-level strength.', exp: 'Competitive lifters' },
+    { id: 'mythic', ink: '#be123c',    name: 'Mythic',    from: 97, color: '#ff5a7a', c2: '#a1123a', blurb: 'Top 3% of lifters. Genuinely rare air.', exp: 'Top competitors' },
   ];
 
   const CATEGORIES = [

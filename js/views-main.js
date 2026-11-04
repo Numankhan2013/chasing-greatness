@@ -61,18 +61,18 @@
     chart: { type: 'radar', height: 300 },
     series: [{ name: 'Percentile', data: CATEGORIES.map((c) => Math.round(snap.cats[c.id]?.rank.pct || 0)) }],
     labels: CATEGORIES.map((c) => c.name),
-    xaxis: { labels: { style: { colors: CATEGORIES.map(() => '#c9cfdc'), fontSize: '12px', fontWeight: 700 } } },
+    xaxis: { labels: { style: { colors: CATEGORIES.map(() => (U.light() ? '#3f3f46' : '#d4d4d8')), fontSize: '12px', fontWeight: 600 } } },
     yaxis: { show: false, min: 0, max: 100, tickAmount: 4 },
-    plotOptions: { radar: { size: 105, polygons: { strokeColors: 'rgba(255,255,255,.08)', connectorColors: 'rgba(255,255,255,.08)', fill: { colors: ['rgba(255,255,255,.015)', 'transparent'] } } } },
+    plotOptions: { radar: { size: 105, polygons: { strokeColors: U.light() ? '#e4e4e7' : '#27272a', connectorColors: U.light() ? '#e4e4e7' : '#27272a', fill: { colors: ['transparent'] } } } },
     colors: [color], fill: { opacity: 0.22 }, stroke: { width: 2.5 }, markers: { size: 4, strokeWidth: 0 },
     tooltip: { y: { formatter: (v) => `Stronger than ${v}%` } },
   });
 
   U.liftCard = (id, r) => {
     const ex = C.exById(id), t = tierInfo(r.tier);
-    return `<button class="lift-card" data-act="ex-sheet" data-id="${id}" style="--c:${t.color}">${emblem(r.tier, 54, r.div)}
+    return `<a class="lift-card" href="#/lift?ex=${id}" style="--c:${t.color}">${emblem(r.tier, 54, r.div)}
       <div class="lc-name">${esc(ex.short)}</div><div class="lc-rank" style="color:${t.color}">${esc(r.label)}</div>
-      <div class="lc-val mono">${C.fmtMetric(ex, r.value)}</div>${bar(r.frac, t.color)}<div class="muted xs">Top ${pctTxt(100 - r.pct)}%</div></button>`;
+      <div class="lc-val mono">${C.fmtMetric(ex, r.value)}</div>${bar(r.frac, t.color)}<div class="muted xs">Top ${pctTxt(100 - r.pct)}%</div></a>`;
   };
 
   /* ── Home ── */
@@ -83,32 +83,34 @@
     const greet = (hr < 5 ? 'Late night grind' : hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening') + (S().profile.name ? `, ${esc(S().profile.name)}` : '');
     const goal = S().profile.weeklyGoal || 3, wk = C.sessionsThisWeek(), streak = C.weekStreak(), prs = C.prsSince(30).length;
 
-    const hero = `<section class="hero card reveal" style="--c:${t.color};--c2:${t.c2}"><div class="hero-glow"></div>
+    // The focus card is always dark, so it uses the tier's bright metal colour in both themes.
+    const hero = `<section class="hero card reveal" style="--c:${t.metal};--c2:${t.c2}"><div class="hero-glow"></div>
       <div class="hero-emblem">${emblem(o ? o.tier : -1, 150, o?.div)}</div>
       <div class="hero-body"><div class="kicker">${greet}</div><h1 class="rank-name">${o ? esc(o.label) : 'Unranked'}</h1>
       ${o ? `<p class="hero-sub">Stronger than <b><span data-count="${Math.round(o.pct)}">${Math.round(o.pct)}</span>%</b> of lifters at your bodyweight</p>
-        <div class="hero-meter">${ladder(o.pct)}<div class="meter-meta"><span>${o.next ? `<b>${(o.next.from - o.pct).toFixed(1)}</b> pts to <b style="color:${tierInfo(o.next.tier).color}">${esc(o.next.label)}</b>` : 'Top of the mountain'}</span><span class="mono">SR <b data-count="${o.rating}">${o.rating}</b></span></div></div>
-        <p class="muted small">${esc(t.exp)} · based on ${o.coverage} of ${CATEGORIES.length} muscle groups${o.coverage < 4 ? ', so train more groups to firm it up' : ''}</p>`
+        <div class="hero-meter">${ladder(o.pct, true)}<div class="meter-meta"><span>${o.next ? `<b>${(o.next.from - o.pct).toFixed(1)}</b> pts to <b style="color:${tierInfo(o.next.tier).metal}">${esc(o.next.label)}</b>` : 'Top of the mountain'}</span><span class="mono">SR <b data-count="${o.rating}">${o.rating}</b></span></div></div>
+        <p class="muted small">${esc(t.exp)} · based on ${o.coverage} of ${CATEGORIES.length} muscle groups</p>
+        <div class="actions hero-actions"><button class="btn primary lg" data-act="plus">Log or add a lift ${icon('arrowRight')}</button></div>`
       : `<p class="hero-sub">Tell us what you can lift right now and see where you stand. Takes a minute, no workout needed.</p><div class="actions hero-actions"><a class="btn primary" href="#/profile?edit=1">${icon('sparkle')} Build my strength profile</a><a class="btn" href="#/log">${icon('plus')} Log a workout</a></div>`}</div></section>`;
 
     const stats = `<section class="stats reveal">
-      <div class="stat goal">${ring(wk / goal, wk >= goal ? '#4ee6a0' : '#ff7a3d', 58, `${wk}/${goal}`)}<div><div class="stat-l">Weekly goal</div><div class="stat-s">${wk >= goal ? 'Smashed it' : `${goal - wk} to go`}</div></div></div>
+      <div class="stat goal">${ring(wk / goal, wk >= goal ? 'var(--good)' : 'var(--brand)', 58, `${wk}/${goal}`)}<div><div class="stat-l">Weekly goal</div><div class="stat-s">${wk >= goal ? 'Smashed it' : `${goal - wk} to go`}</div></div></div>
       <div class="stat"><div class="stat-v"><span data-count="${streak}">${streak}</span>${icon('flame', 'fire')}</div><div class="stat-l">Week streak</div></div>
       <div class="stat"><div class="stat-v"><span data-count="${S().workouts.length}">${S().workouts.length}</span></div><div class="stat-l">Workouts</div></div>
       <div class="stat"><div class="stat-v"><span data-count="${prs}">${prs}</span>${icon('trophy', 'gold')}</div><div class="stat-l">PRs · 30 days</div></div></section>`;
 
     const tiles = CATEGORIES.map((c) => {
       const d = snap.cats[c.id];
-      if (!d) return `<a class="cat-tile empty" href="#/ranks?cat=${c.id}">${emblem(-1, 38)}<div><b>${c.name}</b><span class="muted small">Not ranked yet</span></div></a>`;
+      if (!d) return `<a class="cat-tile empty" href="#/lifts?cat=${c.id}">${emblem(-1, 38)}<div><b>${c.name}</b><span class="muted small">Not ranked yet</span></div></a>`;
       const tt = tierInfo(d.rank.tier);
-      return `<a class="cat-tile" href="#/ranks?cat=${c.id}" style="--c:${tt.color}">${emblem(d.rank.tier, 38, d.rank.div)}<div><b>${c.name}</b><span class="small" style="color:${tt.color}">${esc(d.rank.label)}</span></div><span class="cat-pct mono">${pctTxt(d.rank.pct)}%</span></a>`;
+      return `<a class="cat-tile" href="#/lifts?cat=${c.id}" style="--c:${tt.color}">${emblem(d.rank.tier, 38, d.rank.div)}<div><b>${c.name}</b><span class="small" style="color:${tt.color}">${esc(d.rank.label)}</span></div><span class="cat-pct mono">${pctTxt(d.rank.pct)}%</span></a>`;
     }).join('');
     const top = Object.entries(snap.exRanks).sort((a, b) => b[1].pct - a[1].pct).slice(0, 8);
     const recent = [...S().workouts].sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt - a.updatedAt).slice(0, 4);
 
     return `${hero}${stats}
-      ${o ? `<section class="card reveal"><div class="sec-head"><h2>Muscle groups</h2><a class="link" href="#/ranks">All ranks ${icon('chevRight')}</a></div><div class="cat-grid">${tiles}</div></section>
-      <section class="reveal"><div class="sec-head"><h2>Top lifts</h2><a class="link" href="#/ranks">See all ${icon('chevRight')}</a></div><div class="h-scroll">${top.map(([id, r]) => U.liftCard(id, r)).join('')}</div></section>` : ''}
+      ${o ? `<section class="card reveal"><div class="sec-head"><h2>Muscle groups</h2><a class="link" href="#/lifts">All ranks ${icon('chevRight')}</a></div><div class="cat-grid">${tiles}</div></section>
+      <section class="reveal"><div class="sec-head"><h2>Top lifts</h2><a class="link" href="#/lifts">See all ${icon('chevRight')}</a></div><div class="h-scroll">${top.map(([id, r]) => U.liftCard(id, r)).join('')}</div></section>` : ''}
       <section class="two-col">
         <div class="card reveal"><div class="sec-head"><h2>Consistency</h2><span class="muted small">Last 6 months</span></div>${U.heatmap()}</div>
         <div class="card reveal"><div class="sec-head"><h2>Recent</h2><a href="#/history" class="link">History ${icon('chevRight')}</a></div>${recent.length ? recent.map(U.workoutRow).join('') : '<p class="muted">Nothing logged yet.</p>'}</div></section>`;
@@ -161,9 +163,28 @@
   /* ── Settings: iOS-style list, every change saves instantly ── */
   const row = (label, control, sub = '') => `<label class="set-row-i"><span class="grow"><span>${label}</span>${sub ? `<span class="muted xs">${sub}</span>` : ''}</span>${control}<span class="saved-tick" aria-hidden="true">${icon('check')}</span></label>`;
   const sel = (name, opts, cur) => `<select name="${name}">${opts.map(([v, l]) => `<option value="${v}" ${String(cur) === String(v) ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
-  U.views.settings = () => {
-    const p = S().profile, cl = window.CG_CLOUD;
-    return `<div class="page-head reveal"><h1>Settings</h1></div>
+  /* Me: who you are, your strength profile, your activity, and settings, in one grouped list. */
+  U.views.me = () => {
+    if (!C.currentBW()) return U.setupView();
+    const p = S().profile, cl = window.CG_CLOUD, o = C.snapshot().overall, t = tierInfo(o ? o.tier : -1);
+    const u = cl && cl.user;
+    const nav = (href, ic, label, value = '', act = '') => `<${act ? 'button' : 'a'} class="set-row-i link-row" ${act ? `data-act="${act}"` : `href="${href}"`}><span class="row-ic">${icon(ic)}</span><span class="grow">${label}</span>${value ? `<span class="muted row-val">${value}</span>` : ''}${icon('chevRight', 'muted')}</${act ? 'button' : 'a'}>`;
+    return `<div class="page-head reveal"><h1>Me</h1></div>
+      <a class="card reveal me-hero" href="#/profile" style="--c:${t.color}">
+        ${u && u.photo ? `<img class="avatar" src="${esc(u.photo)}" alt="" referrerpolicy="no-referrer">` : `<span class="avatar">${icon('user')}</span>`}
+        <div class="grow"><b>${esc(p.name || (u && u.name) || 'You')}</b><span class="muted small">${o ? `<span style="color:${t.color}">${esc(o.label)}</span> · stronger than ${pctTxt(o.pct)}%` : 'Not ranked yet'}</span></div>
+        ${emblem(o ? o.tier : -1, 44, o?.div)}</a>
+      <h3 class="group-label reveal">Strength profile</h3>
+      <section class="card list reveal">
+        ${nav('#/profile', 'sparkle', 'Your analysis')}
+        ${nav('#/profile?edit=1', 'dumbbell', 'Key lifts', `${Object.keys(S().lifts).length} added`)}
+        ${nav('', 'plus', 'Add a lift', '', 'lift-picker')}
+      </section>
+      <h3 class="group-label reveal">Activity</h3>
+      <section class="card list reveal">
+        ${nav('#/history', 'history', 'Workout history', `${S().workouts.length}`)}
+        ${nav('#/bodyweight', 'scale', 'Bodyweight', C.currentBW() ? C.fmtW(C.currentBW()) : '')}
+      </section>
       ${U.cloudCard()}
       <form id="profile-form" class="settings-form" autocomplete="off">
         <h3 class="group-label reveal">About you</h3>
@@ -180,16 +201,14 @@
           ${row('Rest timer', sel('rest', [60, 90, 120, 150, 180, 240].map((n) => [n, n < 120 ? `${n} sec` : `${n / 60} min`]), p.rest || 120), 'Only in live workouts')}
         </section>
       </form>
-      <h3 class="group-label reveal">Strength profile</h3>
-      <section class="card list reveal">
-        <a class="set-row-i link-row" href="#/profile"><span class="grow">Your analysis</span>${icon('chevRight', 'muted')}</a>
-        <a class="set-row-i link-row" href="#/profile?edit=1"><span class="grow">Edit key lifts</span>${icon('chevRight', 'muted')}</a>
-        ${S().custom.map((c) => `<div class="set-row-i"><span class="grow"><span>${esc(c.name)}</span><span class="muted xs">Custom · ${esc(C.catById(c.cat).name)} · ${C.history(c.id).length} sessions</span></span><button class="icon-btn" data-act="del-custom" data-id="${c.id}" aria-label="Delete ${esc(c.name)}">${icon('trash')}</button></div>`).join('')}
-      </section>
+      ${S().custom.length ? `<h3 class="group-label reveal">Custom exercises</h3><section class="card list reveal">${S().custom.map((c) => `<div class="set-row-i"><span class="grow"><span>${esc(c.name)}</span><span class="muted xs">Custom · ${esc(C.catById(c.cat).name)} · ${C.history(c.id).length} sessions</span></span><button class="icon-btn" data-act="del-custom" data-id="${c.id}" aria-label="Delete ${esc(c.name)}">${icon('trash')}</button></div>`).join('')}</section>` : ''}
       <section class="card list reveal">
         ${cl && cl.user ? `<button class="set-row-i btn-row" data-act="cloud-signout">Sign out</button>` : ''}
         <button class="set-row-i btn-row danger-row" data-act="reset">Erase all my data</button>
       </section>
       <p class="muted xs center">Standards: Strength Level community data · Icons: Lucide · Charts: ApexCharts · Motion: GSAP</p>`;
   };
+  U.views.settings = U.views.me;
+
+  U.views.bodyweight = () => `<a class="back-link reveal" href="#/me">${icon('chevRight', 'flip')} Me</a><div class="page-head reveal"><h1>Bodyweight</h1></div>${U.bodyweightCard()}`;
 })();

@@ -5,21 +5,28 @@
   const { $, $$, icon, toast, st } = U;
   const S = () => C.state;
 
+  /* Four places + one action. Every route maps to the tab it lives under. */
   const NAV = [
     { r: 'home', label: 'Home', icon: 'home' },
-    { r: 'ranks', label: 'Ranks', icon: 'trophy' },
-    { r: 'log', label: 'Log', icon: 'plus', fab: true },
-    { r: 'progress', label: 'Progress', icon: 'chart' },
+    { r: 'lifts', label: 'Lifts', icon: 'trophy' },
+    { r: 'plus', label: 'Log', icon: 'plus', fab: true },
     { r: 'insights', label: 'Insights', icon: 'bulb' },
-    { r: 'profile', label: 'Profile', icon: 'user', desk: true },
-    { r: 'history', label: 'History', icon: 'history', desk: true },
-    { r: 'settings', label: 'Settings', icon: 'settings', desk: true },
+    { r: 'me', label: 'Me', icon: 'user' },
   ];
+  const TAB_OF = { ranks: 'lifts', lift: 'lifts', progress: 'lifts', log: 'plus', profile: 'me', history: 'me', settings: 'me', bodyweight: 'me' };
+  const TITLES = { home: 'Home', lifts: 'Lifts', ranks: 'Lifts', lift: 'Lift', insights: 'Insights', me: 'Me', settings: 'Me', profile: 'Profile', history: 'History', log: 'Log', bodyweight: 'Bodyweight' };
   function renderNav(route) {
-    $('#nav').innerHTML = NAV.map((n) => `<a href="#/${n.r}" class="${n.r === route ? 'on' : ''} ${n.desk ? 'desk' : ''} ${n.fab ? 'fab' : ''}" ${n.r === route ? 'aria-current="page"' : ''}><span class="nav-ic">${icon(n.icon)}</span><span class="nav-l">${n.label}</span></a>`).join('');
+    const tab = TAB_OF[route] || route;
+    $('#nav').innerHTML = NAV.map((n) => (n.fab
+      ? `<button class="tab-plus ${tab === 'plus' ? 'on' : ''}" data-act="plus" aria-label="Log a workout or add a lift"><span class="nav-ic">${icon(n.icon)}</span><span class="nav-l">${n.label}</span></button>`
+      : `<a href="#/${n.r}" class="${n.r === tab ? 'on' : ''}" ${n.r === tab ? 'aria-current="page"' : ''}><span class="nav-ic">${icon(n.icon)}</span><span class="nav-l">${n.label}</span></a>`)).join('');
     const un = C.unit();
-    $('#unit-slot').innerHTML = `<button class="unit-toggle" data-act="toggle-unit" aria-label="Units: ${un === 'kg' ? 'kilograms' : 'pounds'}. Tap to switch."><span class="${un === 'kg' ? 'on' : ''}">kg</span><span class="${un === 'lb' ? 'on' : ''}">lb</span></button>`;
-    $('#mobile-actions').innerHTML = `<a href="#/profile" aria-label="Profile" class="${route === 'profile' ? 'on' : ''}">${icon('user')}</a><a href="#/history" aria-label="History" class="${route === 'history' ? 'on' : ''}">${icon('history')}</a><a href="#/settings" aria-label="Settings" class="${route === 'settings' ? 'on' : ''}">${icon('settings')}</a>`;
+    const cu = window.CG_CLOUD && window.CG_CLOUD.user, isLight = document.documentElement.dataset.theme === 'light';
+    const initials = (S().profile.name || (cu && cu.name) || 'Me').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+    $('#unit-slot').innerHTML = `<button class="unit-toggle" data-act="toggle-unit" aria-label="Units: ${un === 'kg' ? 'kilograms' : 'pounds'}. Tap to switch."><span class="${un === 'kg' ? 'on' : ''}">kg</span><span class="${un === 'lb' ? 'on' : ''}">lb</span></button>
+      <button class="theme-btn" data-act="toggle-theme" aria-label="Switch to ${isLight ? 'dark' : 'light'} theme">${icon(isLight ? 'moon' : 'sun')}</button>
+      ${C.currentBW() ? `<a class="avatar-btn" href="#/me" aria-label="Me">${cu && cu.photo ? `<img src="${U.esc(cu.photo)}" alt="" referrerpolicy="no-referrer">` : `<span>${U.esc(initials)}</span>`}</a>` : ''}`;
+    $('#mobile-actions').innerHTML = '';
   }
   function parseRoute() {
     const [path, qs] = location.hash.replace(/^#\/?/, '').split('?');
@@ -51,7 +58,7 @@
     if (!C.currentBW() || (route === 'profile' && params.setup)) document.body.dataset.onboard = '1'; else delete document.body.dataset.onboard;
     main.innerHTML = U.views[route](params);
     document.body.dataset.route = route;
-    document.title = route === 'home' ? 'Chasing Greatness' : `${NAV.find((n) => n.r === route)?.label} · Chasing Greatness`;
+    document.title = route === 'home' ? 'Chasing Greatness' : `${TITLES[route] || 'Chasing Greatness'} · Chasing Greatness`;
     U.flushMounts();
     U.paint(main);
   }
@@ -161,8 +168,7 @@
       reader.onload = () => {
         try {
           const data = C.normalize(JSON.parse(reader.result));
-          if (!confirm(`Import ${data.workouts.length} workouts? This replaces what's stored on this device.`)) return;
-          C.replaceState(data); toast('Backup restored.'); render();
+          U.confirm('This replaces what\'s stored on this device.', { header: `Import ${data.workouts.length} workouts?`, ok: 'Import' }).then((ok) => { if (ok) { C.replaceState(data); toast('Backup restored.'); render(); } });
         } catch (err) { toast('That file isn\'t a Chasing Greatness backup.'); }
       };
       reader.readAsText(el.files[0]);
@@ -178,12 +184,31 @@
     switch (act) {
       case 'close-sheet': U.closeSheet(); break;
       case 'ex-sheet': U.exSheet(b.dataset.id); break;
-      case 'lift-sheet': { const id = b.dataset.id; if (!$('#sheet').hidden) { U.closeSheet(); setTimeout(() => U.liftSheet(id), 280); } else U.liftSheet(id); break; }
+      case 'lift-sheet': U.liftSheet(b.dataset.id); break;
       case 'lift-picker': U.liftPicker(); break;
+      case 'plus':
+        // One entry point for adding anything: a native iOS action sheet.
+        U.actionSheet('Add', [
+          { text: 'Log a finished workout', sub: 'Quick entry after the gym', icon: 'clipboard', act: 'past' },
+          { text: 'Start a live workout', sub: 'Tick off sets, with a rest timer', icon: 'play', act: 'live' },
+          { text: 'Add a lift to my profile', sub: 'What you can do now, to sharpen your rank', icon: 'sparkle', act: 'lift' },
+          { text: 'Cancel', role: 'cancel' },
+        ]).then((choice) => {
+          if (choice === 'lift') return U.liftPicker();
+          if (choice === 'past' || choice === 'live') {
+            if (!st.draft || (!st.draft.entries.length && !st.draft.id)) st.draft = Object.assign(U.newDraft(), { mode: choice });
+            else if (!st.draft.id) st.draft.mode = st.draft.mode || choice;
+            U.persistDraft();
+            if (location.hash.startsWith('#/log')) render(); else location.hash = '#/log';
+          }
+        });
+        break;
       case 'remove-lift': {
         const id = b.dataset.id;
-        if (!confirm(`Remove ${C.exById(id).name} from your strength profile? Logged workouts aren't affected.`)) break;
-        delete S().lifts[id]; C.save(); U.closeSheet(); setTimeout(render, 280); toast('Removed from your profile.');
+        U.confirm('Logged workouts aren\'t affected.', { header: `Remove ${C.exById(id).name} from your profile?`, ok: 'Remove', destructive: true }).then((ok) => {
+          if (!ok) return;
+          delete S().lifts[id]; C.save(); U.closeSheet(); setTimeout(render, 280); toast('Removed from your profile.');
+        });
         break;
       }
       case 'pick': U.pickerSheet(); break;
@@ -233,26 +258,31 @@
       }
       case 'rm-entry': d.entries.splice(ei, 1); U.persistDraft(); rerenderLog(); break;
       case 'toggle-notes': d.showNotes = !d.showNotes; rerenderLog(); if (d.showNotes) $('#log-notes')?.focus(); break;
-      case 'discard': if (confirm('Discard this workout?')) { st.draft = U.newDraft(); U.clearDraft(); U.stopRest(); rerenderLog(); } break;
+      case 'discard': U.confirm('Everything you entered for this workout will be cleared.', { header: 'Discard workout?', ok: 'Discard', destructive: true }).then((ok) => { if (ok) { st.draft = U.newDraft(); U.clearDraft(); U.stopRest(); rerenderLog(); } }); break;
       case 'finish': U.finishWorkout(); break;
       case 'del-wo': {
         e.preventDefault(); e.stopPropagation();
         const id = b.dataset.id, w = S().workouts.find((x) => x.id === id);
-        if (!w || !confirm(`Delete the workout from ${U.fmtDate(w.date, true)}? This can't be undone.`)) break;
-        S().workouts = S().workouts.filter((x) => x.id !== id);
-        S().deleted.push({ id, at: Date.now() });
-        C.save();
-        if (st.draft?.id === id) { st.draft = st.stash; st.stash = null; }
-        toast('Workout deleted.');
-        if (location.hash.startsWith('#/history')) render(); else location.hash = '#/history';
+        if (!w) break;
+        U.confirm('This can\'t be undone.', { header: `Delete the workout from ${U.fmtDate(w.date, true)}?`, ok: 'Delete', destructive: true }).then((ok) => {
+          b.closest('ion-item-sliding')?.close?.();
+          if (!ok) return;
+          S().workouts = S().workouts.filter((x) => x.id !== id);
+          S().deleted.push({ id, at: Date.now() });
+          C.save();
+          if (st.draft?.id === id) { st.draft = st.stash; st.stash = null; }
+          toast('Workout deleted.');
+          if (location.hash.startsWith('#/history')) render(); else location.hash = '#/history';
+        });
         break;
       }
-      case 'del-custom':
-        if (C.history(b.dataset.id).length && !confirm('This exercise has logged sets. Delete it and its sets?')) break;
+      case 'del-custom': (C.history(b.dataset.id).length ? U.confirm('Its logged sets will be deleted too.', { header: 'Delete this exercise?', ok: 'Delete', destructive: true }) : Promise.resolve(true)).then((ok) => {
+        if (!ok) return;
         S().custom = S().custom.filter((c) => c.id !== b.dataset.id);
         S().workouts.forEach((w) => { const n = w.entries.length; w.entries = w.entries.filter((en) => en.ex !== b.dataset.id); if (w.entries.length !== n) w.updatedAt = Date.now(); });
         C.tombstoneMissing({ workouts: S().workouts }, Object.assign(S(), { workouts: S().workouts.filter((w) => w.entries.length) }));
         C.save(); render();
+      });
         break;
       case 'export': {
         const a = document.createElement('a');
@@ -264,8 +294,8 @@
         break;
       }
       case 'demo':
-        if (S().workouts.length && !confirm('Replace your workouts with demo data? Export a backup first to keep yours.')) break;
-        {
+        (S().workouts.length ? U.confirm('Your workouts will be replaced.', { header: 'Load demo data?', ok: 'Replace' }) : Promise.resolve(true)).then((ok) => {
+          if (!ok) return;
           const dd = demoData();
           if (!C.currentBW()) S().profile.unit = 'kg';
           C.tombstoneMissing({ workouts: S().workouts }, Object.assign(S(), { workouts: dd.workouts }));
@@ -273,11 +303,19 @@
           st.draft = null; st.calc = null; U.clearDraft();
           C.save(); location.hash = '#/home'; render();
           toast('Demo data loaded. Erase it anytime in Settings.');
-        }
+        });
         break;
       case 'reset':
-        if (confirm(window.CG_CLOUD && window.CG_CLOUD.user ? 'Erase all workouts, weigh-ins and settings from this device AND your cloud backup?' : 'Erase all workouts, weigh-ins and settings from this device?')) { C.replaceState(C.clone(C.DEFAULT)); st.draft = null; st.calc = null; U.clearDraft(); location.hash = '#/home'; render(); }
+        U.confirm(window.CG_CLOUD && window.CG_CLOUD.user ? 'All workouts, lifts, weigh-ins and settings will be erased from this device and your cloud backup.' : 'All workouts, lifts, weigh-ins and settings will be erased from this device.', { header: 'Erase all your data?', ok: 'Erase', destructive: true })
+          .then((ok) => { if (ok) { C.replaceState(C.clone(C.DEFAULT)); st.draft = null; st.calc = null; U.clearDraft(); location.hash = '#/home'; render(); } });
         break;
+      case 'toggle-theme': {
+        const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = next;
+        try { localStorage.setItem('chasing-greatness.theme', next); } catch (err) { /* noop */ }
+        render();
+        break;
+      }
       case 'toggle-unit': {
         const from = C.unit(), to = from === 'kg' ? 'lb' : 'kg';
         const f = to === 'lb' ? 1 / C.KG_PER_LB : C.KG_PER_LB, cv = (v) => (v === '' || v == null || isNaN(parseFloat(v)) ? v : String(C.round(parseFloat(v) * f, 1)));
@@ -300,10 +338,12 @@
         break;
       case 'cloud-signout': {
         const out = (force) => window.CG_CLOUD.signOut(force).then(() => { try { localStorage.removeItem(GUEST_KEY); } catch (err) { /* noop */ } location.hash = '#/home'; render(); toast('Signed out. Your data is safe in your account.'); });
-        if (!confirm('Sign out? Your data stays safe in your Google account and is removed from this device.')) break;
-        out(false).catch((err) => {
-          if (err.code === 'unsynced' && confirm('Some recent changes haven\'t synced yet (you may be offline). Sign out anyway and lose them?')) out(true).catch((e2) => toast(U.esc(e2.message)));
-          else if (err.code !== 'unsynced') toast(U.esc(err.message || String(err)));
+        U.confirm('Your data stays safe in your Google account and is removed from this device.', { header: 'Sign out?', ok: 'Sign out', destructive: true }).then((ok) => {
+          if (!ok) return;
+          out(false).catch((err) => {
+            if (err.code === 'unsynced') U.confirm('Some recent changes haven\'t synced yet (you may be offline).', { header: 'Sign out anyway?', ok: 'Sign out', destructive: true }).then((y) => { if (y) out(true).catch((e2) => toast(U.esc(e2.message))); });
+            else toast(U.esc(err.message || String(err)));
+          });
         });
         break;
       }
