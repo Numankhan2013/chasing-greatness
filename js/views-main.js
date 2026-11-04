@@ -8,16 +8,15 @@
   U.setupView = () => {
     const p = S().profile;
     return `<section class="welcome reveal">
-      <div class="welcome-emblems">${[1, 3, 4, 6].map((t) => emblem(t, 58, 1)).join('')}</div>
-      <h1 class="display">Chase<br><span class="grad">greatness.</span></h1>
-      <p class="muted lead">Log your lifts and see exactly where you stand, ranked against <b>10.9 million real lifts</b> at your bodyweight. Free and private. Your data stays on this device.</p>
+      <div class="kicker">Step 1 of 2</div><h1>Let's set you up${window.CG_CLOUD?.user?.name ? ', ' + esc(window.CG_CLOUD.user.name.split(' ')[0]) : ''}</h1>
+      <p class="muted lead">A few basics so we can compare you fairly. Next, you'll enter your key lifts.</p>
       <form id="setup-form" class="card form-grid">
-        <label>Name <input name="name" value="${esc(p.name)}" placeholder="Optional" autocomplete="given-name"></label>
+        <label>Name <input name="name" value="${esc(p.name || (window.CG_CLOUD?.user?.name || '').split(' ')[0])}" placeholder="Optional" autocomplete="given-name"></label>
         <label>Units <select name="unit"><option value="kg" ${p.unit === 'kg' ? 'selected' : ''}>Kilograms</option><option value="lb" ${p.unit === 'lb' ? 'selected' : ''}>Pounds</option></select></label>
         <label>Sex <select name="sex"><option value="male" ${p.sex === 'male' ? 'selected' : ''}>Male</option><option value="female" ${p.sex === 'female' ? 'selected' : ''}>Female</option></select></label>
         <label>Bodyweight <input name="bw" type="number" inputmode="decimal" step="0.1" min="20" required placeholder="e.g. 75"></label>
         <label>How long have you been lifting? <select name="months"><option value="">Choose…</option>${U.EXPERIENCE.map(([v, l]) => `<option value="${v}" ${p.trainingMonths === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-        <div class="span2 actions"><button class="btn primary lg" type="submit">Next: what can you lift? ${icon('arrowRight')}</button><button class="btn ghost" type="button" data-act="demo">Try with demo data</button></div>
+        <div class="span2 actions"><button class="btn primary lg" type="submit">Next: what can you lift? ${icon('arrowRight')}</button></div>
       </form></section>`;
   };
 
@@ -122,46 +121,68 @@
     }).join('');
   };
 
-  /* ── Cloud sync card ── */
+  /* ── Sign-in landing (first thing a new visitor sees) ── */
+  const GOOGLE_G = '<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+  U.landingView = () => {
+    const cl = window.CG_CLOUD;
+    return `<section class="landing">
+      <div class="landing-emblems">${[1, 3, 4, 6].map((t) => emblem(t, 54, 1)).join('')}</div>
+      <h1 class="display">Chase<br><span class="grad">greatness.</span></h1>
+      <p class="lead muted">See exactly where your strength stands, ranked against <b>10.9 million real lifts</b> at your bodyweight. Then watch yourself climb.</p>
+      <ul class="landing-points"><li>${icon('trophy')} Honest ranks for 22 exercises</li><li>${icon('chart')} Progress, projections and insights</li><li>${icon('cloud')} Synced across all your devices</li></ul>
+      <button class="btn google lg wide" data-act="cloud-signin">${GOOGLE_G} Continue with Google</button>
+      ${cl && cl.status === 'error' ? `<p class="small" style="color:var(--bad)">${esc(cl.error)}</p>` : ''}
+      <p class="muted xs center">Only you can see your data. <button class="text-btn" data-act="guest">Use without an account</button></p>
+    </section>`;
+  };
+  U.splashView = (msg) => `<section class="splash">${emblem(3, 72, 1)}<p class="muted">${esc(msg)}</p></section>`;
+
+  /* ── Account card ── */
   U.cloudCard = () => {
     const cl = window.CG_CLOUD;
     if (!cl || cl.status === 'unconfigured') return '';
     const ago = (t) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`; };
-    const label = { syncing: 'Syncing…', synced: `Synced ${cl.lastSync ? ago(cl.lastSync) : ''}`, offline: 'Offline. Changes will sync when you reconnect.', error: `Sync problem: ${esc(cl.error || 'try again')}` }[cl.status] || '';
-    if (!cl.user) {
-      return `<section class="card reveal" id="cloud-card"><h2>Cloud sync</h2>
-        <p class="muted">Sign in with Google to back up your lifts and see them on every device. Free, and only you can read your data.</p>
-        <div class="actions"><button class="btn primary" data-act="cloud-signin">Sign in with Google</button></div>
-        ${cl.status === 'error' ? `<p class="muted small">${label}</p>` : ''}</section>`;
-    }
-    return `<section class="card reveal" id="cloud-card"><h2>Cloud sync</h2>
-      <div class="pr-row"><span>${cl.user.photo ? `<img src="${esc(cl.user.photo)}" alt="" width="28" height="28" style="border-radius:50%;vertical-align:middle;margin-right:.5rem" referrerpolicy="no-referrer">` : ''}<b>${esc(cl.user.name || cl.user.email)}</b> <span class="muted xs">${esc(cl.user.email)}</span></span></div>
-      <p class="muted small" id="cloud-status">${label}</p>
-      <div class="actions"><button class="btn ghost" data-act="cloud-sync">Sync now</button><button class="btn ghost" data-act="cloud-signout">Sign out</button></div></section>`;
+    const label = { syncing: 'Syncing…', synced: `Synced ${cl.lastSync ? ago(cl.lastSync) : ''}`, offline: 'Offline. Will sync when you reconnect.', error: `Sync problem: ${esc(cl.error || 'try again')}` }[cl.status] || '';
+    if (!cl.user) return `<section class="card reveal account" id="cloud-card"><div class="acct-row"><span class="avatar">${icon('user')}</span><div class="grow"><b>Not signed in</b><span class="muted small">Sign in to back up and sync your data</span></div></div>
+      <button class="btn google wide" data-act="cloud-signin">${GOOGLE_G} Continue with Google</button></section>`;
+    const u = cl.user;
+    return `<section class="card reveal account" id="cloud-card"><div class="acct-row">${u.photo ? `<img class="avatar" src="${esc(u.photo)}" alt="" referrerpolicy="no-referrer">` : `<span class="avatar">${icon('user')}</span>`}
+      <div class="grow"><b>${esc(u.name || 'Signed in')}</b><span class="muted small">${esc(u.email)}</span></div></div>
+      <div class="acct-sync"><span class="sync-dot ${esc(cl.status)}"></span><span class="muted small grow" id="cloud-status">${label}</span><button class="text-btn" data-act="cloud-sync">Sync now</button></div></section>`;
   };
 
-  /* ── Settings ── */
+  /* ── Settings: iOS-style list, every change saves instantly ── */
+  const row = (label, control, sub = '') => `<label class="set-row-i"><span class="grow"><span>${label}</span>${sub ? `<span class="muted xs">${sub}</span>` : ''}</span>${control}<span class="saved-tick" aria-hidden="true">${icon('check')}</span></label>`;
+  const sel = (name, opts, cur) => `<select name="${name}">${opts.map(([v, l]) => `<option value="${v}" ${String(cur) === String(v) ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
   U.views.settings = () => {
-    const p = S().profile;
+    const p = S().profile, cl = window.CG_CLOUD;
     return `<div class="page-head reveal"><h1>Settings</h1></div>
-      <section class="card reveal"><h2>Profile</h2><form id="profile-form" class="form-grid">
-        <label>Name <input name="name" value="${esc(p.name)}" placeholder="Optional"></label>
-        <label>Units <select name="unit"><option value="kg" ${p.unit === 'kg' ? 'selected' : ''}>Kilograms</option><option value="lb" ${p.unit === 'lb' ? 'selected' : ''}>Pounds</option></select></label>
-        <label>Sex (for standards) <select name="sex"><option value="male" ${p.sex === 'male' ? 'selected' : ''}>Male</option><option value="female" ${p.sex === 'female' ? 'selected' : ''}>Female</option></select></label>
-        <label>Bodyweight (${C.unit()}) <input name="bw" type="number" inputmode="decimal" step="0.1" min="20" value="${C.currentBW() ? C.wNum(C.currentBW()) : ''}"></label>
-        <label>How long have you been lifting? <select name="months"><option value="">Choose…</option>${U.EXPERIENCE.map(([v, l]) => `<option value="${v}" ${p.trainingMonths === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-        <label>Weekly goal <select name="goal">${[2, 3, 4, 5, 6].map((n) => `<option value="${n}" ${p.weeklyGoal === n ? 'selected' : ''}>${n} workouts / week</option>`).join('')}</select></label>
-        <label>Rest timer (live workouts) <select name="rest">${[60, 90, 120, 150, 180, 240].map((n) => `<option value="${n}" ${(p.rest || 120) === n ? 'selected' : ''}>${n < 120 ? n + ' sec' : n / 60 + ' min'}</option>`).join('')}</select></label>
-        <div class="span2 actions"><button class="btn primary" type="submit">Save profile</button></div></form></section>
       ${U.cloudCard()}
-      <section class="card reveal"><h2>Your data</h2>
-        <p class="muted">${window.CG_CLOUD && window.CG_CLOUD.user ? 'Saved on this device and backed up to your Google account.' : 'Everything is stored on this device. Sign in above to back it up, or export a backup now and then.'}</p>
-        <div class="actions"><button class="btn primary" data-act="export">${icon('download')} Export backup</button>
-          <label class="btn ghost">${icon('upload')} Import backup<input type="file" accept="application/json,.json" id="import-file" hidden></label>
-          <button class="btn ghost" data-act="demo">Load demo data</button><button class="btn danger" data-act="reset">${icon('trash')} Erase everything</button></div>
-        <p class="muted small">${S().workouts.length} workouts · ${S().bodyweights.length} weigh-ins · ${S().custom.length} custom exercises</p></section>
-      ${S().custom.length ? `<section class="card reveal"><h2>Custom exercises</h2>${S().custom.map((c) => `<div class="pr-row"><span>${esc(c.name)} <span class="muted xs">${esc(C.catById(c.cat).name)}</span></span><span class="muted small">${C.history(c.id).length} sessions</span><button class="icon-btn" data-act="del-custom" data-id="${c.id}" aria-label="Delete">${icon('trash')}</button></div>`).join('')}</section>` : ''}
-      <section class="card reveal"><h2>Install as an app</h2><p class="muted">iPhone: Safari → Share → <b>Add to Home Screen</b>. Android: Chrome menu → <b>Install app</b>. Works offline.</p></section>
+      <form id="profile-form" class="settings-form" autocomplete="off">
+        <h3 class="group-label reveal">About you</h3>
+        <section class="card list reveal">
+          ${row('Name', `<input name="name" value="${esc(p.name)}" placeholder="Your name">`)}
+          ${row('Bodyweight', `<span class="with-unit"><input name="bw" type="number" inputmode="decimal" step="0.1" min="20" value="${C.currentBW() ? C.wNum(C.currentBW()) : ''}"><span class="muted">${C.unit()}</span></span>`, 'Ranks are relative to this')}
+          ${row('Sex', sel('sex', [['male', 'Male'], ['female', 'Female']], p.sex), 'Picks the right strength standards')}
+          ${row('Lifting for', sel('months', [['', 'Choose…'], ...U.EXPERIENCE], p.trainingMonths ?? ''))}
+          ${row('Units', sel('unit', [['kg', 'Kilograms'], ['lb', 'Pounds']], p.unit))}
+        </section>
+        <h3 class="group-label reveal">Training</h3>
+        <section class="card list reveal">
+          ${row('Weekly goal', sel('goal', [2, 3, 4, 5, 6].map((n) => [n, `${n} workouts`]), p.weeklyGoal))}
+          ${row('Rest timer', sel('rest', [60, 90, 120, 150, 180, 240].map((n) => [n, n < 120 ? `${n} sec` : `${n / 60} min`]), p.rest || 120), 'Only in live workouts')}
+        </section>
+      </form>
+      <h3 class="group-label reveal">Strength profile</h3>
+      <section class="card list reveal">
+        <a class="set-row-i link-row" href="#/profile"><span class="grow">Your analysis</span>${icon('chevRight', 'muted')}</a>
+        <a class="set-row-i link-row" href="#/profile?edit=1"><span class="grow">Edit key lifts</span>${icon('chevRight', 'muted')}</a>
+        ${S().custom.map((c) => `<div class="set-row-i"><span class="grow"><span>${esc(c.name)}</span><span class="muted xs">Custom · ${esc(C.catById(c.cat).name)} · ${C.history(c.id).length} sessions</span></span><button class="icon-btn" data-act="del-custom" data-id="${c.id}" aria-label="Delete ${esc(c.name)}">${icon('trash')}</button></div>`).join('')}
+      </section>
+      <section class="card list reveal">
+        ${cl && cl.user ? `<button class="set-row-i btn-row" data-act="cloud-signout">Sign out</button>` : ''}
+        <button class="set-row-i btn-row danger-row" data-act="reset">Erase all my data</button>
+      </section>
       <p class="muted xs center">Standards: Strength Level community data · Icons: Lucide · Charts: ApexCharts · Motion: GSAP</p>`;
   };
 })();

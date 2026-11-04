@@ -23,11 +23,29 @@
     const [path, qs] = location.hash.replace(/^#\/?/, '').split('?');
     return { route: U.views[path] ? path : 'home', params: Object.fromEntries(new URLSearchParams(qs || '')) };
   }
+  /* Sign-in gate: visitors see the landing page until they sign in (or choose guest mode). */
+  const GUEST_KEY = 'chasing-greatness.guest';
+  const isGuest = () => { try { return localStorage.getItem(GUEST_KEY) === '1'; } catch (e) { return false; } };
+  let authTimedOut = false;
+  setTimeout(() => { authTimedOut = true; if (document.body.dataset.gate) render(); }, 5000);
+  function gate() {
+    const cl = window.CG_CLOUD;
+    if (!cl || cl.status === 'unconfigured') return null;
+    if (cl.user) return !cl.lastSync && !C.currentBW() && !['error', 'offline'].includes(cl.status) ? U.splashView('Loading your profile…') : null;
+    if (isGuest()) return null;
+    if (cl.status === 'off' && !authTimedOut) return U.splashView('Loading…');
+    return U.landingView();
+  }
   function render() {
     const { route, params } = parseRoute();
-    renderNav(route);
     U.destroyCharts();
     const main = $('#view');
+    const g = gate();
+    if (g) { document.body.dataset.gate = '1'; main.innerHTML = g; U.paint(main); return; }
+    delete document.body.dataset.gate;
+    renderNav(route);
+    // Onboarding (setup + first profile build): no tab bar, so the user finishes the flow.
+    if (!C.currentBW() || (route === 'profile' && params.setup)) document.body.dataset.onboard = '1'; else delete document.body.dataset.onboard;
     main.innerHTML = U.views[route](params);
     document.body.dataset.route = route;
     document.title = route === 'home' ? 'Chasing Greatness' : `${NAV.find((n) => n.r === route)?.label} · Chasing Greatness`;
@@ -81,7 +99,7 @@
     const f = e.target;
     e.preventDefault();
     if (f.id === 'setup-form') { applyProfile(new FormData(f)); location.hash = '#/profile?setup=1'; }
-    else if (f.id === 'profile-form') { applyProfile(new FormData(f)); toast('Saved.'); render(); }
+    else if (f.id === 'profile-form') { document.activeElement?.blur(); }
     else if (f.id === 'lifts-form') { U.saveLifts(f); location.hash = '#/profile'; toast('Profile updated. Here\'s where you stand.'); }
     else if (f.id === 'bw-form') {
       const kg = C.fromDisp(parseFloat(new FormData(f).get('bw')));
@@ -119,6 +137,12 @@
   document.addEventListener('change', (e) => {
     const el = e.target;
     if (el.id === 'log-date' && st.draft) { st.draft.date = el.value || C.todayISO(); st.draft.dateTouched = !!st.draft.id || st.draft.date !== C.todayISO(); U.persistDraft(); rerenderLog(); }
+    if (el.closest('#profile-form')) {
+      applyProfile(new FormData(el.closest('#profile-form')));
+      if (el.name === 'unit') { render(); toast('Units updated.'); return; }
+      const r = el.closest('.set-row-i'); if (r) { r.classList.add('saved'); setTimeout(() => r.classList.remove('saved'), 1600); }
+      return;
+    }
     if (el.closest('#calc-form') && el.tagName === 'SELECT') { st.calc[el.name] = el.value; $('#calc-wlabel').textContent = U.calcWLabel(); $('#calc-result').innerHTML = U.calcResult(); }
     if (el.id === 'import-file' && el.files[0]) {
       const reader = new FileReader();
@@ -234,11 +258,12 @@
       case 'reset':
         if (confirm(window.CG_CLOUD && window.CG_CLOUD.user ? 'Erase all workouts, weigh-ins and settings from this device AND your cloud backup?' : 'Erase all workouts, weigh-ins and settings from this device?')) { C.replaceState(C.clone(C.DEFAULT)); st.draft = null; st.calc = null; U.clearDraft(); location.hash = '#/home'; render(); }
         break;
+      case 'guest': try { localStorage.setItem(GUEST_KEY, '1'); } catch (err) { /* noop */ } render(); break;
       case 'cloud-signin':
         window.CG_CLOUD.signIn().catch((err) => toast(`Sign-in failed: ${err.message || err}`));
         break;
       case 'cloud-signout':
-        if (confirm('Sign out? Your data stays on this device and in your cloud backup.')) window.CG_CLOUD.signOut().then(() => toast('Signed out.'));
+        if (confirm('Sign out? Your data stays safe in your Google account.')) window.CG_CLOUD.signOut().then(() => { try { localStorage.removeItem(GUEST_KEY); } catch (err) { /* noop */ } location.hash = '#/home'; render(); });
         break;
       case 'cloud-sync':
         window.CG_CLOUD.syncNow().then(() => { if (window.CG_CLOUD.status === 'synced') toast('All synced.'); });
@@ -251,9 +276,12 @@
 
   // Cloud sync: refresh the Settings card on status changes, and redraw when a merge brought new data.
   if (window.CG_CLOUD) {
-    let lastUser = null;
+    let lastUser = null, lastGate = '';
     window.CG_CLOUD.onChange((cl) => {
       const uid = cl.user && cl.user.uid;
+      const gk = `${uid}|${cl.status === 'off'}|${!!cl.lastSync}|${cl.status === 'error'}`;
+      if (gk !== lastGate && (document.body.dataset.gate || !lastGate || uid !== lastUser)) { lastGate = gk; lastUser = uid; render(); return; }
+      lastGate = gk;
       if (document.body.dataset.route === 'settings' && (uid !== lastUser || !$('#cloud-status'))) { lastUser = uid; render(); return; }
       lastUser = uid;
       const el = $('#cloud-status'); if (el) el.outerHTML = (new DOMParser().parseFromString(U.cloudCard(), 'text/html')).querySelector('#cloud-status')?.outerHTML || '';

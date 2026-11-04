@@ -95,16 +95,46 @@ window.UI = (() => {
   function toast(msg) { const t = $('#toast'); t.innerHTML = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3000); }
   function openSheet(html, cls = '') {
     const el = $('#sheet');
-    el.innerHTML = `<div class="sheet-backdrop" data-act="close-sheet"></div><div class="sheet-panel ${cls}" role="dialog" aria-modal="true"><div class="sheet-grip"></div>${html}</div>`;
+    el.innerHTML = `<div class="sheet-backdrop" data-act="close-sheet"></div><div class="sheet-panel ${cls}" role="dialog" aria-modal="true"><div class="sheet-top"><div class="sheet-grip"></div><button class="sheet-close" data-act="close-sheet" aria-label="Close">${icon('x')}</button></div>${html}</div>`;
     el.hidden = false; document.body.classList.add('sheet-open');
     requestAnimationFrame(() => el.classList.add('show'));
+    enableSwipe(el.querySelector('.sheet-panel'));
     paint(el);
+  }
+  /* Swipe down to dismiss, like iOS sheets: drag from anywhere when the content is scrolled to the top. */
+  function enableSwipe(panel) {
+    let y0 = null, dy = 0, t0 = 0;
+    const atTop = (t) => { const sc = t.closest('.pick-list'); return panel.scrollTop <= 0 && (!sc || sc.scrollTop <= 0); };
+    const start = (y, target) => { if (target.closest('input, select, textarea') || !atTop(target)) return; y0 = y; dy = 0; t0 = Date.now(); };
+    const move = (y, e) => {
+      if (y0 == null) return;
+      dy = y - y0;
+      if (dy <= 0) { if (dy < -6) { y0 = null; panel.style.transform = ''; } return; }  // scrolling up: let the content scroll
+      panel.style.transition = 'none';
+      panel.style.transform = `translate(-50%, ${dy}px)`;
+      if (e.cancelable) e.preventDefault();
+    };
+    const end = () => {
+      if (y0 == null) return;
+      y0 = null; panel.style.transition = '';
+      if (dy > 110 || (dy > 35 && dy / (Date.now() - t0) > 0.55)) closeSheet(); else panel.style.transform = '';
+    };
+    panel.addEventListener('touchstart', (e) => start(e.touches[0].clientY, e.target), { passive: true });
+    panel.addEventListener('touchmove', (e) => move(e.touches[0].clientY, e), { passive: false });
+    panel.addEventListener('touchend', end);
+    panel.addEventListener('touchcancel', end);
+    const grip = panel.querySelector('.sheet-top');   // mouse: drag the handle
+    grip.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse' || e.target.closest('button')) return; start(e.clientY, e.target); grip.setPointerCapture(e.pointerId); });
+    grip.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') move(e.clientY, e); });
+    grip.addEventListener('pointerup', (e) => { if (e.pointerType === 'mouse') end(); });
   }
   function closeSheet() {
     const el = $('#sheet');
     if (el.hidden) return;
+    const panel = el.querySelector('.sheet-panel');
+    if (panel) { panel.style.transition = 'transform .26s cubic-bezier(.3,.7,.4,1)'; panel.style.transform = 'translate(-50%, 105%)'; }
     el.classList.remove('show'); document.body.classList.remove('sheet-open');
-    setTimeout(() => { el.hidden = true; el.innerHTML = ''; }, 260);
+    setTimeout(() => { el.hidden = true; el.innerHTML = ''; }, 270);
   }
   const timer = { end: 0, dur: 0, iv: null };
   function startRest(sec) { timer.dur = sec; timer.end = Date.now() + sec * 1000; clearInterval(timer.iv); timer.iv = setInterval(tickRest, 250); $('#rest').hidden = false; tickRest(); }

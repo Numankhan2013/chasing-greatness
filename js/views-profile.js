@@ -31,21 +31,17 @@
 
   function builder(setup) {
     const p = S().profile;
-    const more = CATEGORIES.map((c) => {
-      const list = C.EXERCISES.filter((e) => e.std && e.cat === c.id && !CORE.includes(e.id));
-      return list.length ? `<div class="pl-group">${c.name}</div>${list.map(liftRow).join('')}` : '';
-    }).join('');
-    const filledMore = Object.keys(S().lifts).some((id) => !CORE.includes(id));
-    return `<div class="page-head reveal"><div><h1>${setup ? 'Where do you stand?' : 'Edit your lifts'}</h1>
-        <p class="muted">Enter a recent set you're confident in, at any reps. This is just your starting point. <b>It isn't logged as a workout.</b></p></div></div>
+    const extra = Object.keys(S().lifts).filter((id) => !CORE.includes(id) && C.exById(id).std).map((id) => C.exById(id));
+    return `<div class="page-head reveal"><div>${setup ? '<div class="kicker">Step 2 of 2</div>' : ''}<h1>${setup ? 'Where do you stand?' : 'Edit your lifts'}</h1>
+        <p class="muted">Six key lifts give a solid read on your strength. Enter a recent set you're confident in, at any reps. Skip any you don't do. <b>Nothing here is logged as a workout.</b></p></div></div>
       <form id="lifts-form" class="reveal">
         <section class="card"><label>How long have you been lifting?
           <select name="months"><option value="">Choose…</option>${U.EXPERIENCE.map(([v, l]) => `<option value="${v}" ${p.trainingMonths === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></section>
-        <section class="card"><div class="sec-head"><h2>The big ones</h2><span class="muted xs">Skip any you don't do</span></div>
+        <section class="card"><div class="sec-head"><h2>Key lifts</h2><span class="muted xs">Fill in what you can</span></div>
           <div class="pl-head muted xs"><span>Exercise</span><span>Weight (${C.unit()})</span><span></span><span>Reps</span><span></span></div>
-          ${C.EXERCISES.filter((e) => CORE.includes(e.id)).map(liftRow).join('')}</section>
-        <details class="card pl-more" ${filledMore ? 'open' : ''}><summary><h2>More exercises</h2>${icon('chevDown')}</summary>
-          <p class="muted small">Incline, dumbbells, machines, arms… Each one you add sharpens your muscle-group ranks.</p>${more}</details>
+          ${CORE.map((id) => liftRow(C.exById(id))).join('')}</section>
+        ${extra.length ? `<section class="card"><div class="sec-head"><h2>Other lifts</h2><span class="muted xs">Added earlier</span></div>${extra.map(liftRow).join('')}</section>` : ''}
+        <p class="muted small pl-note">${icon('sparkle')} Every exercise you log later (incline, dumbbells, machines, arms…) sharpens your rank automatically. The more you log, the more accurate it gets.</p>
         <div class="finish-bar"><button class="btn primary lg wide" type="submit">${icon('sparkle')} ${setup ? 'See where I stand' : 'Save & update analysis'}</button></div>
         ${setup ? '<a class="btn wide" href="#/home">Skip for now</a>' : '<a class="btn wide" href="#/profile">Cancel</a>'}
       </form>`;
@@ -60,6 +56,7 @@
       const kg = C.fromDisp(w), old = S().lifts[id];
       lifts[id] = old && Math.abs(old.w - kg) < 0.01 && old.r === r ? old : { w: kg, r, date: today };
     }
+    for (const [id, l] of Object.entries(S().lifts)) if (!form.querySelector(`.pl-row[data-ex="${id}"]`)) lifts[id] = l;  // keep lifts not shown here
     S().lifts = lifts;
     C.save();
   };
@@ -91,11 +88,11 @@
     const near = Object.entries(snap.exRanks).filter(([, r]) => r.next).map(([id, r]) => ({ ex: C.exById(id), r })).sort((a, b) => a.r.need / a.r.value - b.r.need / b.r.value)[0];
     if (near) add('good', 'zap', 'Closest rank-up', `${esc(near.ex.name)}: ${near.ex.kind === 'bw' ? `${C.round(near.r.need, 1)} more reps` : `+${C.fmtW(near.r.need)}`} on your max gets you <b style="color:${tierInfo(near.r.next.tier).color}">${esc(near.r.next.label)}</b>.`);
     const missing = CATEGORIES.filter((c) => !snap.cats[c.id]);
-    if (missing.length) add('info', 'layers', 'Complete your picture', `No lift yet for ${missing.map((c) => c.name.toLowerCase()).join(', ')}. <a class="link" href="#/profile?edit=1">Add one</a> for a full analysis.`);
+    if (missing.length) add('info', 'layers', 'Complete your picture', `No data yet for ${missing.map((c) => c.name.toLowerCase()).join(', ')}. <a class="link" href="#/log">Log a workout</a> with one of those and your analysis fills in automatically.`);
 
     const groups = CATEGORIES.map((c) => {
       const d = snap.cats[c.id];
-      if (!d) return `<a class="grp-row dim" href="#/profile?edit=1">${emblem(-1, 34)}<div class="grow"><b>${c.name}</b><span class="muted xs">Add a lift</span></div>${icon('plus', 'muted')}</a>`;
+      if (!d) return `<a class="grp-row dim" href="#/log">${emblem(-1, 34)}<div class="grow"><b>${c.name}</b><span class="muted xs">Log an exercise to rank this</span></div>${icon('plus', 'muted')}</a>`;
       const tt = tierInfo(d.rank.tier);
       return `<div class="grp-row">${emblem(d.rank.tier, 34, d.rank.div)}<div class="grow"><div class="ex-row-top"><b>${c.name}</b><span class="mono small">${pctTxt(d.rank.pct)}%</span></div>${bar(d.rank.pct / 100, tt.color)}<span class="xs"><span style="color:${tt.color}">${esc(d.rank.label)}</span> <span class="muted">· ${esc(d.top.ex.short)}</span></span></div></div>`;
     }).join('');
