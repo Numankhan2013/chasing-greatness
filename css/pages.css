@@ -240,3 +240,42 @@ button.grp-row { width: 100%; border: 0; border-top: 1px solid var(--line); back
 .unlock-list { list-style: none; padding: 0; margin: .2rem 0 1rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .55rem; }
 .unlock-list li { display: flex; align-items: center; gap: .55rem; color: var(--muted); font-size: .9375rem; }
 .unlock-list .ic { width: 17px; height: 17px; color: var(--text); }
+
+/* ── Insight widgets (shared by Spread and Compact layouts) ── */
+.layout-seg .seg-opt span.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .15); }
+.gl-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .6rem; }
+.gl-tile { display: flex; align-items: center; gap: .6rem; padding: .65rem .7rem; border: 1px solid var(--line); border-radius: 10px; background: var(--card); transition: background .15s; }
+.gl-tile:hover { background: var(--fill); }
+.gl-tile > span { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.gl-tile.down { border-style: dashed; }
+.gl-missing { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-top: .7rem; }
+.gl-missing .pill { display: inline-flex; align-items: center; gap: .25rem; }
+.gl-missing .pill .ic { width: 14px; height: 14px; }
+.bal-list { display: flex; flex-direction: column; gap: .9rem; }
+.bal-top { display: flex; justify-content: space-between; font-size: .875rem; margin-bottom: .35rem; }
+.bal-top .mono { color: var(--muted); font-weight: 500; }
+.bal-track { position: relative; height: 8px; border-radius: 99px; background: var(--card-2); }
+.bal-mid { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--line-2); border-radius: 2px; }
+.bal-fill { position: absolute; top: 0; bottom: 0; border-radius: 99px; background: var(--good); }
+.bal.off .bal-fill { background: var(--warn); }
+.bal .xs { margin-top: .35rem; }
+.bal-warn { color: var(--text); }
+.gl-exp { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; }
+.gl-exp-side { display: flex; flex-direction: column; align-items: center; text-align: center; gap: .15rem; min-width: 84px; }
+.gl-exp-side.muted .emblem { opacity: .6; }
+.gl-arrow { color: var(--muted); }
+.gl-verdict { margin-left: auto; }
+.gl-next { display: flex; align-items: center; gap: .7rem; border-radius: 10px; }
+.gl-next-top { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline; }
+.gl-next .bar { margin: .35rem 0 .25rem; }
+/* Compact: rows with a left label */
+.glance { display: flex; flex-direction: column; }
+.gl-row { display: grid; grid-template-columns: 96px 1fr; gap: .8rem; align-items: center; padding: .85rem 0; border-top: 1px solid var(--line); }
+.glance .sec-head + .gl-row { border-top: 0; padding-top: .2rem; }
+.gl-label { font-size: .8125rem; color: var(--muted); font-weight: 500; align-self: start; padding-top: .35rem; }
+.gl-row .gl-tiles, .gl-row .gl-missing { margin-top: 0; }
+@media (max-width: 560px) {
+  .gl-row { grid-template-columns: 1fr; gap: .45rem; }
+  .gl-label { padding-top: 0; }
+  .gl-verdict { margin-left: 0; }
+}
